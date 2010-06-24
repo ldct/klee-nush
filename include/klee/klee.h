@@ -31,6 +31,8 @@ extern "C" {
   /// output files, etc.
   void klee_make_symbolic(void *addr, unsigned nbytes, const char *name);
 
+  void klee_make_length_symbolic(void *addr, unsigned nbytes, const char *name);
+
   /// klee_range - Construct a symbolic value in the signed interval
   /// [begin,end).
   ///
@@ -93,11 +95,13 @@ extern "C" {
    */
   unsigned klee_is_symbolic(unsigned n);
 
+  void klee_log_state();
 
   /* The following intrinsics are primarily intended for internal use
      and may have peculiar semantics. */
 
   void klee_assume(unsigned condition);
+  void klee_force_assume(unsigned condition);
   void klee_warning(const char *message);
   void klee_warning_once(const char *message);
   void klee_prefer_cex(void *object, unsigned condition);
@@ -126,6 +130,13 @@ extern "C" {
      to undo.  Be aware that some special functions, such as exit(),
      may not always work. */
   void klee_alias_function(const char* fn_name, const char* new_fn_name);
+
+  int klee_strlen(char *str);
+  char * klee_strcat(char *dst, char *src);
+
+  void klee_NB_start();
+  void klee_eval_strlen(int len, char* str);
+  void klee_NB_stop();
 
 #ifdef __cplusplus
 }

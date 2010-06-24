@@ -50,6 +50,13 @@ public:
   bool fake_object;
   bool isUserSpecified;
 
+  /// true if we only track the length of this memoryobject.
+  bool onlyTrackLength;
+  /// true if this is a length tracker.
+  bool isALength;
+  MemoryObject *length;
+
+
   /// "Location" for which this memory object was allocated. This
   /// should be either the allocating instruction or the global object
   /// it was allocated for (or whatever else makes sense).

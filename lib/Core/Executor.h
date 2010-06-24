@@ -217,6 +217,8 @@ private:
                     ExactResolutionList &results,
                     const std::string &name);
 
+  MemoryObject* executeNoBindAlloc(ExecutionState &state, unsigned size);
+
   /// Allocate and bind a new object in a particular state. NOTE: This
   /// function may fork.
   ///

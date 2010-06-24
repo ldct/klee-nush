@@ -2732,6 +2732,19 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
   return os;
 }
 
+MemoryObject* Executor::executeNoBindAlloc(ExecutionState &state, unsigned size) 
+{                                       
+  MemoryObject *mo = memory->allocate(size, true, false, 0); //state.prevPC->inst);
+  if (!mo)
+    std::cerr << "xj: simpleAlloc failed to execute memory->allocate\n";
+  ObjectState *os = bindObjectInState(state, mo, true);
+  os->initializeToZero();
+  //for now set allocSite = 0, since allocSite seems like a purely debug value
+  
+  //normally we would execute bindLocal now, but there is nothing to bind this to...
+  return mo;
+}
+
 void Executor::executeAlloc(ExecutionState &state,
                             ref<Expr> size,
                             bool isLocal,

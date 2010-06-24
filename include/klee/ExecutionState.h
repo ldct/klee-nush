@@ -90,6 +90,13 @@ public:
 
   /// Disables forking, set by user code.
   bool forkDisabled;
+  
+  /// no branch lock, true means lock has been taken, anything that tries to acquire the lock will die
+  /// currently, how it works is we call NBStart, which will create the lock
+  /// then do some dangerous klee_assume() that can potentially branch
+  /// then call NBStop. The first state to execute NBStop takes the lock
+  /// the rest, seeing the lock taken, will die
+  bool *NBLock;
 
   std::map<const std::string*, std::set<unsigned> > coveredLines;
   PTreeNode *ptreeNode;
