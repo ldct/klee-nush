@@ -1,0 +1,14 @@
+*.log
+*.sum
+*.exp
+*.config
+Release/
+config.status
+include/klee/Config/config.h
+lib/*/Release/
+runtime/*/Release/
+stp/*/Release/
+test/*/Output/
+test/*/*/Output/
+tools/*/Release/
+unittests/*/Release/
