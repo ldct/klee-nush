@@ -436,9 +436,13 @@ void MergingSearcher::update(ExecutionState *current,
                              const std::set<ExecutionState*> &addedStates,
                              const std::set<ExecutionState*> &removedStates) {
   if (!removedStates.empty()) {
+  	//alt starts out as removedStates
+  	//then bits of it get erased
+  	//finally its passed to baseSearcher
+  
     std::set<ExecutionState *> alt = removedStates;
-    for (std::set<ExecutionState*>::const_iterator it = removedStates.begin(),
-           ie = removedStates.end(); it != ie; ++it) {
+    std::set<ExecutionState*>::const_iterator it;
+    for (it = removedStates.begin(); it != removedStates.end(); ++it) {
       ExecutionState *es = *it;
       std::set<ExecutionState*>::const_iterator it = statesAtMerge.find(es);
       if (it!=statesAtMerge.end()) {

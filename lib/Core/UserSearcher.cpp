@@ -67,6 +67,11 @@ namespace {
   cl::opt<bool>
   UseBumpMerge("use-bump-merge", 
            cl::desc("Enable support for klee_merge() (extra experimental)"));
+
+  cl::opt<bool>
+  UseExhaustiveMerge("use-exhaustive-merge", 
+           cl::desc("Enable exhaustive merge. States than can be merged will automatically be merged (extra experimental)"));
+
  
   cl::opt<bool>
   UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search", 

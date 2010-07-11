@@ -172,8 +172,8 @@ bool ExecutionState::merge(const ExecutionState &b) {
   }
 
   std::set< ref<Expr> > aConstraints(constraints.begin(), constraints.end());
-  std::set< ref<Expr> > bConstraints(b.constraints.begin(), 
-                                     b.constraints.end());
+  std::set< ref<Expr> > bConstraints(b.constraints.begin(), b.constraints.end());
+  
   std::set< ref<Expr> > commonConstraints, aSuffix, bSuffix;
   std::set_intersection(aConstraints.begin(), aConstraints.end(),
                         bConstraints.begin(), bConstraints.end(),
