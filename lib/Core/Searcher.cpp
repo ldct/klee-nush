@@ -458,6 +458,32 @@ void MergingSearcher::update(ExecutionState *current,
 
 ///
 
+ExhaustiveMergingSearcher::ExhaustiveMergingSearcher(Executor &_executor, Searcher *_baseSearcher) 
+  : executor(_executor),
+    baseSearcher(_baseSearcher) {
+}
+
+ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
+  delete baseSearcher;
+}
+
+///
+
+ExecutionState &ExhaustiveMergingSearcher::selectState() {
+  //std::cerr << "hello\n";
+  ExecutionState &es = baseSearcher->selectState();
+  return es;  
+}
+
+void ExhaustiveMergingSearcher::update(ExecutionState *current,
+                             const std::set<ExecutionState*> &addedStates,
+                             const std::set<ExecutionState*> &removedStates) {
+  baseSearcher->update(current, addedStates, removedStates);
+}
+
+///
+
+
 BatchingSearcher::BatchingSearcher(Searcher *_baseSearcher,
                                    double _timeBudget,
                                    unsigned _instructionBudget) 

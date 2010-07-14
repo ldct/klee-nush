@@ -201,6 +201,29 @@ namespace klee {
     }
   };
 
+  class ExhaustiveMergingSearcher : public Searcher {
+    Executor &executor;
+    //std::map<llvm::Instruction*, ExecutionState*> statesAtMerge;
+    Searcher *baseSearcher;
+    //llvm::Function *mergeFunction;
+
+  private:
+    //llvm::Instruction *getMergePoint(ExecutionState &es);
+
+  public:
+    ExhaustiveMergingSearcher(Executor &executor, Searcher *baseSearcher);
+    ~ExhaustiveMergingSearcher();
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::set<ExecutionState*> &addedStates,
+                const std::set<ExecutionState*> &removedStates);
+    bool empty() { return baseSearcher->empty(); }// && statesAtMerge.empty(); }
+    void printName(std::ostream &os) {
+      os << "ExhaustiveMergingSearcher\n";
+    }
+  };
+
   class BatchingSearcher : public Searcher {
     Searcher *baseSearcher;
     double timeBudget;
