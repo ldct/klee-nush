@@ -2360,11 +2360,8 @@ void Executor::run(ExecutionState &initialState) {
 
     // XXX total hack, just because I like non uniform better but want
     // seed results to be equally weighted.
-    for (std::set<ExecutionState*>::iterator
-           it = states.begin(), ie = states.end();
-         it != ie; ++it) {
+    for (std::set<ExecutionState*>::iterator it = states.begin(), ie = states.end(); it != ie; ++it)
       (*it)->weight = 1.;
-    }
 
     if (OnlySeed)
       goto dump;

@@ -479,6 +479,12 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
                              const std::set<ExecutionState*> &addedStates,
                              const std::set<ExecutionState*> &removedStates) {
   baseSearcher->update(current, addedStates, removedStates);
+
+  const char *pc_opcode = current ? current->pc->inst->getOpcodeName() : " ";
+  const char *pv_opcode = current ? current->prevPC->inst->getOpcodeName() : " ";
+  
+  std::cerr << "update called, +" << addedStates.size() << " -" << removedStates.size() << " " << pc_opcode << " " << pv_opcode << "\n";
+
 }
 
 ///
