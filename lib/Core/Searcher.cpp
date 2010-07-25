@@ -470,7 +470,6 @@ ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
 ///
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {
-  //std::cerr << "hello\n";
   ExecutionState &es = baseSearcher->selectState();
   return es;  
 }
@@ -479,12 +478,32 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
                              const std::set<ExecutionState*> &addedStates,
                              const std::set<ExecutionState*> &removedStates) {
   baseSearcher->update(current, addedStates, removedStates);
-
-  const char *pc_opcode = current ? current->pc->inst->getOpcodeName() : " ";
-  const char *pv_opcode = current ? current->prevPC->inst->getOpcodeName() : " ";
+  std::cerr << "update called, +" << addedStates.size() << " -" << removedStates.size();
   
-  std::cerr << "update called, +" << addedStates.size() << " -" << removedStates.size() << " " << pc_opcode << " " << pv_opcode << "\n";
+  if (!current) {
+    std::cerr << "\n";
+    return;
+  }
 
+  std::set<ExecutionState*> newStates = addedStates;  //cast
+  newStates.insert(current);
+
+  std::set<ExecutionState*>::const_iterator it;
+  for (it = newStates.begin(); it != newStates.end(); ++it) {
+    ExecutionState *es = *it;
+    Instruction *prevInst = es->prevPC->inst;
+    const char *prevOPName = prevInst->getOpcodeName();
+  
+    if (prevInst->getOpcode() == Instruction::Br) {
+      pausedStates.insert(es);
+      baseSearcher->removeState(es);
+    }
+  
+  baseSearcher->update(current, addedStates, removedStates);
+  std::cerr << " " << prevOPName;  
+   
+  }  
+  std::cerr << "\n";
 }
 
 ///

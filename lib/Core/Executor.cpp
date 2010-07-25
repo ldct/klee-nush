@@ -2370,8 +2370,12 @@ void Executor::run(ExecutionState &initialState) {
   searcher = constructUserSearcher(*this);
 
   searcher->update(0, states, std::set<ExecutionState*>());
-
-  while (!states.empty() && !haltExecution) {
+  // XXX: states.empty() and searcher.empty() can disagree
+  // when using exhaustiveMergingSearcher which removes paused
+  // states from its own internal set of states but not from the
+  // executor's states. this is quite ugly.       
+  while (!states.empty() && !searcher->empty() && !haltExecution) {
+    
     ExecutionState &state = searcher->selectState();
     KInstruction *ki = state.pc;
     stepInstruction(state);

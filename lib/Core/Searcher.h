@@ -203,9 +203,9 @@ namespace klee {
 
   class ExhaustiveMergingSearcher : public Searcher {
     Executor &executor;
+    std::set<ExecutionState*> pausedStates;
     //std::map<llvm::Instruction*, ExecutionState*> statesAtMerge;
     Searcher *baseSearcher;
-    //llvm::Function *mergeFunction;
 
   private:
     //llvm::Instruction *getMergePoint(ExecutionState &es);
