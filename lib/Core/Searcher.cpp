@@ -61,9 +61,7 @@ ExecutionState &DFSSearcher::selectState() {
 void DFSSearcher::update(ExecutionState *current,
                          const std::set<ExecutionState*> &addedStates,
                          const std::set<ExecutionState*> &removedStates) {
-  states.insert(states.end(),
-                addedStates.begin(),
-                addedStates.end());
+  states.insert(states.end(), addedStates.begin(),addedStates.end());
   for (std::set<ExecutionState*>::const_iterator it = removedStates.begin(),
          ie = removedStates.end(); it != ie; ++it) {
     ExecutionState *es = *it;
@@ -80,7 +78,6 @@ void DFSSearcher::update(ExecutionState *current,
           break;
         }
       }
-
       assert(ok && "invalid state removed");
     }
   }
@@ -477,15 +474,15 @@ ExecutionState &ExhaustiveMergingSearcher::selectState() {
 void ExhaustiveMergingSearcher::update(ExecutionState *current,
                              const std::set<ExecutionState*> &addedStates,
                              const std::set<ExecutionState*> &removedStates) {
+  std::cerr << "update " << baseSearcher->size() << " +" << addedStates.size() << " -" << removedStates.size();
   baseSearcher->update(current, addedStates, removedStates);
-  std::cerr << "update called, +" << addedStates.size() << " -" << removedStates.size();
-  
+
   if (!current) {
     std::cerr << "\n";
     return;
   }
 
-  std::set<ExecutionState*> newStates = addedStates;  //cast
+  std::set<ExecutionState*> newStates = addedStates;
   newStates.insert(current);
 
   std::set<ExecutionState*>::const_iterator it;
@@ -497,13 +494,11 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
     if (prevInst->getOpcode() == Instruction::Br) {
       pausedStates.insert(es);
       baseSearcher->removeState(es);
+      std::cerr << " [removed]";
     }
-  
-  baseSearcher->update(current, addedStates, removedStates);
-  std::cerr << " " << prevOPName;  
-   
+    std::cerr << " " << prevOPName;  
   }  
-  std::cerr << "\n";
+  std::cerr << " \n";
 }
 
 ///

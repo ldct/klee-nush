@@ -47,6 +47,8 @@ namespace klee {
       os << "<unnamed searcher>\n";
     }
 
+    virtual int size() { return 42; }
+
     // pgbovine - to be called when a searcher gets activated and
     // deactivated, say, by a higher-level searcher; most searchers
     // don't need this functionality, so don't have to override.
@@ -80,6 +82,7 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "DFSSearcher\n";
     }
+    int size() {return states.size();}
   };
 
   class RandomSearcher : public Searcher {
@@ -94,6 +97,7 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "RandomSearcher\n";
     }
+    int size() {return states.size();}
   };
 
   class WeightedRandomSearcher : public Searcher {
