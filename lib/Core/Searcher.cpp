@@ -472,8 +472,8 @@ ExecutionState &ExhaustiveMergingSearcher::selectState() {
 }
 
 void ExhaustiveMergingSearcher::update(ExecutionState *current,
-                             const std::set<ExecutionState*> &addedStates,
-                             const std::set<ExecutionState*> &removedStates) {
+                                       const std::set<ExecutionState*> &addedStates,
+                                       const std::set<ExecutionState*> &removedStates) {
   std::cerr << "update " << baseSearcher->size() << " +" << addedStates.size() << " -" << removedStates.size();
   baseSearcher->update(current, addedStates, removedStates);
 

@@ -47,7 +47,7 @@ namespace klee {
       os << "<unnamed searcher>\n";
     }
 
-    virtual int size() { return 42; }
+    virtual int size() { return -1; }
 
     // pgbovine - to be called when a searcher gets activated and
     // deactivated, say, by a higher-level searcher; most searchers
@@ -79,10 +79,11 @@ namespace klee {
                 const std::set<ExecutionState*> &addedStates,
                 const std::set<ExecutionState*> &removedStates);
     bool empty() { return states.empty(); }
+    int size() { return states.size(); }
+    
     void printName(std::ostream &os) {
       os << "DFSSearcher\n";
     }
-    int size() {return states.size();}
   };
 
   class RandomSearcher : public Searcher {
@@ -93,11 +94,13 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::set<ExecutionState*> &addedStates,
                 const std::set<ExecutionState*> &removedStates);
+
     bool empty() { return states.empty(); }
+    int size() { return states.size(); }
+
     void printName(std::ostream &os) {
       os << "RandomSearcher\n";
     }
-    int size() {return states.size();}
   };
 
   class WeightedRandomSearcher : public Searcher {
@@ -127,7 +130,9 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::set<ExecutionState*> &addedStates,
                 const std::set<ExecutionState*> &removedStates);
+
     bool empty();
+    //XXX: why can't we this define here? also size() cannot be obtained as internally it's a pointer tree.
     void printName(std::ostream &os) {
       os << "WeightedRandomSearcher::";
       switch(type) {
