@@ -12,3 +12,4 @@ test/*/Output/
 test/*/*/Output/
 tools/*/Release/
 unittests/*/Release/
+lib/Core/ExecutionState.link

@@ -466,6 +466,24 @@ ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
 
 ///
 
+void ExhaustiveMergingSearcher::cleanPausedStates() {
+  std::set<ExecutionState*>::const_iterator it, ie;
+  for (it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) {
+    ExecutionState *es = *it;
+    BasicBlock *p = es->pc->inst->getParent();
+
+    std::cerr << "paused state detected" 
+              << " " << p->getNameStr() 
+              << "\n"; 
+    //should be smt like bb4
+
+    for (pred_iterator pi = pred_begin(p), pe = pred_end(p); pi != pe; ++pi) {
+      BasicBlock *pred = *pi;
+      std::cerr << "\tparent state " << pred->getNameStr() << "\n";
+    }
+  }
+}
+
 ExecutionState &ExhaustiveMergingSearcher::selectState() {
   ExecutionState &es = baseSearcher->selectState();
   return es;  
@@ -474,10 +492,14 @@ ExecutionState &ExhaustiveMergingSearcher::selectState() {
 void ExhaustiveMergingSearcher::update(ExecutionState *current,
                                        const std::set<ExecutionState*> &addedStates,
                                        const std::set<ExecutionState*> &removedStates) {
-  std::cerr << "update " << baseSearcher->size() << " +" << addedStates.size() << " -" << removedStates.size();
+  std::cerr << "update " << baseSearcher->size()
+            << " " << pausedStates.size() 
+            << " +" << addedStates.size() 
+            << " -" << removedStates.size();
   baseSearcher->update(current, addedStates, removedStates);
 
-  if (!current) {
+  //only the first executionstate will trigger this
+  if (!current) { 
     std::cerr << "\n";
     return;
   }
@@ -497,8 +519,9 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
       std::cerr << " [removed]";
     }
     std::cerr << " " << prevOPName;  
-  }  
+  }
   std::cerr << " \n";
+  cleanPausedStates();
 }
 
 ///

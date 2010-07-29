@@ -218,6 +218,8 @@ namespace klee {
 
   private:
     //llvm::Instruction *getMergePoint(ExecutionState &es);
+    void cleanPausedStates();
+
 
   public:
     ExhaustiveMergingSearcher(Executor &executor, Searcher *baseSearcher);
