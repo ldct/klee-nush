@@ -472,14 +472,26 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     ExecutionState *es = *it;
     BasicBlock *p = es->pc->inst->getParent();
 
-    std::cerr << "paused state detected" 
-              << " " << p->getNameStr() 
-              << "\n"; 
-    //should be smt like bb4
+    //if an es has only one predecessor then es must satisfy its only blocking input. 
+    if (++pred_begin(p) == pred_end(p)) {
+      pausedStates.erase(es);
+      std::cerr << "one-pred state found, pushing..." << std::endl;
+      baseSearcher->addState(es);
+      return;
+    }
 
-    for (pred_iterator pi = pred_begin(p), pe = pred_end(p); pi != pe; ++pi) {
-      BasicBlock *pred = *pi;
-      std::cerr << "\tparent state " << pred->getNameStr() << "\n";
+    if (baseSearcher->empty()) {
+
+      std::cerr << "paused state detected" 
+                << " at " << p->getNameStr() 
+                << " from " << es->prevPC->inst->getParent()->getNameStr()
+                << "\n"; 
+      //should be smt like "detected at bb4 from bb"
+    
+      for (pred_iterator pi = pred_begin(p), pe = pred_end(p); pi != pe; ++pi) {
+        BasicBlock *pred = *pi;
+        std::cerr << "\tpred state " << pred->getNameStr() << "\n";
+      }
     }
   }
 }
@@ -512,13 +524,13 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
     ExecutionState *es = *it;
     Instruction *prevInst = es->prevPC->inst;
     const char *prevOPName = prevInst->getOpcodeName();
-  
+
+    std::cerr << " " << prevOPName;    
     if (prevInst->getOpcode() == Instruction::Br) {
       pausedStates.insert(es);
       baseSearcher->removeState(es);
       std::cerr << " [removed]";
     }
-    std::cerr << " " << prevOPName;  
   }
   std::cerr << " \n";
   cleanPausedStates();
