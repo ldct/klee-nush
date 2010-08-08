@@ -13,6 +13,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <utility> //make_pair
 #include <queue>
 
 // FIXME: Move out of header, use llvm streams.
@@ -213,7 +214,7 @@ namespace klee {
   class ExhaustiveMergingSearcher : public Searcher {
     Executor &executor;
     std::set<ExecutionState*> pausedStates;
-    //std::map<llvm::Instruction*, ExecutionState*> statesAtMerge;
+    std::map<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, ExecutionState*> statePausedAtBBPair;
     Searcher *baseSearcher;
 
   private:

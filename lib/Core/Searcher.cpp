@@ -468,6 +468,12 @@ ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
 
 void ExhaustiveMergingSearcher::cleanPausedStates() {
   std::set<ExecutionState*>::const_iterator it, ie;
+  std::set<BasicBlock*> pausedBB;
+
+  if (baseSearcher->empty())
+    std::cerr << statePausedAtBBPair.size() << "\n";
+
+
   for (it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) {
     ExecutionState *es = *it;
     BasicBlock *p = es->pc->inst->getParent();
@@ -477,21 +483,31 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
       pausedStates.erase(es);
       std::cerr << "one-pred state found, pushing..." << std::endl;
       baseSearcher->addState(es);
+      statePausedAtBBPair.erase(std::make_pair(es->prevPC->inst->getParent(),p));
       return;
     }
 
-    if (baseSearcher->empty()) {
-
+    if (baseSearcher->empty()) { ///make sure these debugs print only at the end
+      BasicBlock *prevParent = es->prevPC->inst->getParent();
       std::cerr << "paused state detected" 
                 << " at " << p->getNameStr() 
-                << " from " << es->prevPC->inst->getParent()->getNameStr()
+                << " from " << prevParent->getNameStr()
                 << "\n"; 
       //should be smt like "detected at bb4 from bb"
     
-      for (pred_iterator pi = pred_begin(p), pe = pred_end(p); pi != pe; ++pi) {
-        BasicBlock *pred = *pi;
-        std::cerr << "\tpred state " << pred->getNameStr() << "\n";
-      }
+      pausedBB.insert(p);    
+    }
+  }
+  for (std::set<BasicBlock*>::const_iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
+    BasicBlock *bb = *it;
+    std::cerr << "paused basic block " << bb->getNameStr() << "\n";  
+    for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
+      BasicBlock *pred = *pi;
+      std::cerr << "\tpred state " << pred->getNameStr() << "...";
+      if (statePausedAtBBPair.find(std::make_pair(pred, bb)) == statePausedAtBBPair.end())
+        std::cerr << "no\n";
+      else
+        std::cerr << "ok\n";  
     }
   }
 }
@@ -527,9 +543,12 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
 
     std::cerr << " " << prevOPName;    
     if (prevInst->getOpcode() == Instruction::Br) {
+      BasicBlock* pcBB = es->pc->inst->getParent();
+      BasicBlock* prevBB = prevInst->getParent();
       pausedStates.insert(es);
+      statePausedAtBBPair[std::make_pair(prevBB, pcBB)] = es;
       baseSearcher->removeState(es);
-      std::cerr << " [removed]";
+      std::cerr << " [removed]" << prevBB->getNameStr();
     }
   }
   std::cerr << " \n";
