@@ -298,7 +298,12 @@ bool ExecutionState::merge(const ExecutionState &b) {
   for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
          ie = commonConstraints.end(); it != ie; ++it)
     constraints.addConstraint(*it);
-  constraints.addConstraint(OrExpr::create(inA, inB));
 
+
+  constraints.addConstraint(OrExpr::create(inA, inB));
+  for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
+    const ref<Expr> c = *it;
+    std::cerr<<"Showing constraint solver\n"<<c<<"\n";
+  }
   return true;
 }

@@ -107,7 +107,7 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
                                        ConstantExpr::alloc(1, Expr::Bool)));
     }
   }
-
+	
   return ExprReplaceVisitor2(equalities).visit(e);
 }
 
@@ -152,5 +152,6 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 
 void ConstraintManager::addConstraint(ref<Expr> e) {
   e = simplifyExpr(e);
+
   addConstraintInternal(e);
 }
