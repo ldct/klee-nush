@@ -499,11 +499,42 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
   for (std::set<BasicBlock*>::const_iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
     BasicBlock *bb = *it;
     std::cerr << "paused basic block " << bb->getNameStr() << "\n";  
+    bool allOK = true;
+    std::set<ExecutionState*> possibleMerges;
     for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
       BasicBlock *pred = *pi;
-      std::cerr << "\tpred state " << pred->getNameStr() << "..."
-                << ((statePausedAtBBPair.find(std::make_pair(pred, bb)) == statePausedAtBBPair.end()) 
-                ? "no\n" : "ok\n");
+      std::cerr << "\tpred state " << pred->getNameStr() << "...";
+      BBLink link = std::make_pair(pred, bb);
+      std::map<BBLink, ExecutionState*>::iterator BBLinkState = statePausedAtBBPair.find(link);
+      possibleMerges.insert(BBLinkState->second);
+      if (BBLinkState == statePausedAtBBPair.end()) {
+        std::cerr << "no\n";
+        allOK = false;
+      }
+      else {
+        std::cerr << "ok\n";
+      }
+    }
+    if (allOK) {
+      std::cerr << "merging...\n";
+      ExecutionState *target = *possibleMerges.begin();
+      for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
+        if (ei == possibleMerges.begin())
+          continue;
+        ExecutionState *es = *ei;
+        target->merge(*es);
+      }
+      
+      //now deleting
+            
+      for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
+        BasicBlock *pred = *pi;
+        BBLink link = std::make_pair(pred, bb);
+        std::map<BBLink, ExecutionState*>::iterator BBLinkState = statePausedAtBBPair.find(link);
+        statePausedAtBBPair.erase(BBLinkState);
+      }
+      baseSearcher->addState(target);
+      
     }
   }
 }
