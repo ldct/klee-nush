@@ -64,8 +64,13 @@ public:
 bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   ConstraintManager::constraints_ty old;
   bool changed = false;
+    constraints.swap(old);
+ 
+    for(std::vector< ref<Expr> >::const_iterator it = old.begin(), ie = old.end(); it != ie; ++it) {
+    const ref<Expr> c = *it;
+    std::cerr<<"rewrite constraints old\n"<<c<<"\n";
+  }
 
-  constraints.swap(old);
   for (ConstraintManager::constraints_ty::iterator 
          it = old.begin(), ie = old.end(); it != ie; ++it) {
     ref<Expr> &ce = *it;
@@ -77,6 +82,11 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
     } else {
       constraints.push_back(ce);
     }
+  }
+
+    for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
+    const ref<Expr> d = *it;
+    std::cerr<<"rewrite constraint new\n"<<d<<"\n";
   }
 
   return changed;

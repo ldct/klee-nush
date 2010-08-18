@@ -786,6 +786,10 @@ void SpecialFunctionHandler::handleLogState(ExecutionState &state,
   std::string name;
   name = readStringAtAddress(state, arguments[0]);
   std::cerr << "log state called from " << name << " depth = " << state.depth << " constraints = " << state.constraints.size() << "\n";
+  for(std::vector< ref<Expr> >::const_iterator it = state.constraints.begin(), ie = state.constraints.end(); it != ie; ++it) {
+    const ref<Expr> c = *it;
+    std::cerr << "constraints:\n"<<c<<"\n";
+  }
 }
 
 
