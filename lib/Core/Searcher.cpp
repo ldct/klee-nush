@@ -497,7 +497,9 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     }
   }
   for (std::set<BasicBlock*>::const_iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
-    BasicBlock *bb = *it;
+    BasicBlock* bb = *it;
+    //BasicBlock bbp = *bb; fails because BasicBlock constructor (which is private) is called; quite strange. however it type-checks
+    //BasicBlock bb = **it; this is same as BasicBlock *bb = *it
     std::cerr << "paused basic block " << bb->getNameStr() << "\n";  
     bool allOK = true;
     std::set<ExecutionState*> possibleMerges;
