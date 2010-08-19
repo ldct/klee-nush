@@ -65,11 +65,6 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   ConstraintManager::constraints_ty old;
   bool changed = false;
     constraints.swap(old);
- 
-    for(std::vector< ref<Expr> >::const_iterator it = old.begin(), ie = old.end(); it != ie; ++it) {
-    const ref<Expr> c = *it;
-    std::cerr<<"rewrite constraints old\n"<<c<<"\n";
-  }
 
   for (ConstraintManager::constraints_ty::iterator 
          it = old.begin(), ie = old.end(); it != ie; ++it) {
@@ -82,11 +77,6 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
     } else {
       constraints.push_back(ce);
     }
-  }
-
-    for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
-    const ref<Expr> d = *it;
-    std::cerr<<"rewrite constraint new\n"<<d<<"\n";
   }
 
   return changed;
@@ -102,6 +92,11 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
 
   std::map< ref<Expr>, ref<Expr> > equalities;
   
+  for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
+    const ref<Expr> d = *it;
+    std::cerr<<"rewrite constraint old\n"<<d<<"\n";
+  }
+
   for (ConstraintManager::constraints_ty::const_iterator 
          it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
@@ -117,8 +112,8 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
                                        ConstantExpr::alloc(1, Expr::Bool)));
     }
   }
-	
-  return ExprReplaceVisitor2(equalities).visit(e);
+  
+  return ExprReplaceVisitor2(equalities).visit(e);//XXX This is where merging is done
 }
 
 void ConstraintManager::addConstraintInternal(ref<Expr> e) {
@@ -162,6 +157,10 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 
 void ConstraintManager::addConstraint(ref<Expr> e) {
   e = simplifyExpr(e);
+  for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
+    const ref<Expr> d = *it;
+    std::cerr<<"rewrite constraint new\n"<<d<<"\n";
+  }
 
   addConstraintInternal(e);
 }
