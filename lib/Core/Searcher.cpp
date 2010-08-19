@@ -470,6 +470,8 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
   std::map<BBLink, ExecutionState*>::const_iterator it, ie;
   std::set<BasicBlock*> pausedBB;
 
+  std::cerr << "cleanPausedState start, size=" << baseSearcher->size() << "/" << statePausedAtBBPair.size()<< "\n";
+
   if (baseSearcher->empty())
     std::cerr << statePausedAtBBPair.size() << "\n";
 
@@ -477,13 +479,13 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     ExecutionState *es = it->second;
     BasicBlock *p = es->pc->inst->getParent();
 
-    //if an es has only one predecessor then es must satisfy its only blocking input. 
-    if (++pred_begin(p) == pred_end(p)) {
-      std::cerr << "one-pred state found, pushing..." << std::endl;
-      baseSearcher->addState(es);
-      statePausedAtBBPair.erase(std::make_pair(es->prevPC->inst->getParent(),p));
-      return;
-    }
+//if an es has only one predecessor then es must satisfy its only blocking input. 
+//    if (++pred_begin(p) == pred_end(p)) {
+//      std::cerr << "one-pred state found, pushing..." << std::endl;
+//      baseSearcher->addState(es);
+//      statePausedAtBBPair.erase(std::make_pair(es->prevPC->inst->getParent(),p));
+//      return;
+//    }
 
     if (baseSearcher->empty()) { ///make sure these debugs print only at the end
       BasicBlock *prevParent = es->prevPC->inst->getParent();
@@ -525,6 +527,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
           continue;
         ExecutionState *es = *ei;
         target->merge(*es);
+        executor.terminateState(*es);
       }
       
       //now deleting
@@ -539,6 +542,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
       
     }
   }
+  std::cerr << "cleanPausedState done, size=" << baseSearcher->size() << "/" << statePausedAtBBPair.size()<< "\n";
 }
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {
@@ -574,7 +578,7 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
     if (prevInst->getOpcode() == Instruction::Br) {
       BasicBlock* pcBB = es->pc->inst->getParent();
       BasicBlock* prevBB = prevInst->getParent();
-      statePausedAtBBPair[std::make_pair(prevBB, pcBB)] = es;
+      statePausedAtBBPair[std::make_pair(prevBB, pcBB)] = es;      
       baseSearcher->removeState(es);
       std::cerr << " [removed]" << prevBB->getNameStr();
     }
