@@ -69,6 +69,7 @@ StagedSolverImpl::~StagedSolverImpl() {
   delete secondary;
 }
 
+bool StagedSolverImpl::stpsimplify(const Query& query, ref<Expr> &result){return true;}
 bool StagedSolverImpl::computeTruth(const Query& query, bool &isValid) {
   IncompleteSolver::PartialValidity trueResult = primary->computeTruth(query); 
   

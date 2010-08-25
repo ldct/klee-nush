@@ -53,6 +53,10 @@ Solver::~Solver() {
 SolverImpl::~SolverImpl() {
 }
 
+bool Solver::simplify_vc(const Query& query, ref<Expr> &result){
+  return impl->stpsimplify(query,result);
+}
+
 bool Solver::evaluate(const Query& query, Validity &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
@@ -76,6 +80,10 @@ bool SolverImpl::computeValidity(const Query& query, Solver::Validity &result) {
       return false;
     result = isFalse ? Solver::False : Solver::Unknown;
   }
+  return true;
+}
+
+bool SolverImpl::stpsimplify(const Query& query, ref<Expr> &result) {
   return true;
 }
 
@@ -264,7 +272,8 @@ public:
   ValidatingSolver(Solver *_solver, Solver *_oracle) 
     : solver(_solver), oracle(_oracle) {}
   ~ValidatingSolver() { delete solver; }
-  
+
+  bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query&, ref<Expr> &result);
@@ -379,6 +388,7 @@ class DummySolverImpl : public SolverImpl {
 public: 
   DummySolverImpl() {}
   
+  bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
   bool computeValidity(const Query&, Solver::Validity &result) { 
     ++stats::queries;
     // FIXME: We should have stats::queriesFail;
@@ -423,6 +433,7 @@ public:
   STPSolverImpl(STPSolver *_solver, bool _useForkedSTP, bool _optimizeDivides = true);
   ~STPSolverImpl();
 
+  bool stpsimplify(const Query& query, ref<Expr> &result);
   char *getConstraintLog(const Query&);
   void setTimeout(double _timeout) { timeout = _timeout; }
 
@@ -658,6 +669,11 @@ static bool runAndGetCexForked(::VC vc,
 
     return true;
   }
+}
+
+bool
+STPSolverImpl::stpsimplify(const Query& query, ref<Expr> &result) {
+  return true;
 }
 
 bool

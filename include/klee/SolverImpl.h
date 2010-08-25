@@ -56,6 +56,7 @@ namespace klee {
                                       std::vector< std::vector<unsigned char> > 
                                         &values,
                                       bool &hasSolution) = 0;  
+    virtual bool stpsimplify(const Query& query, ref<Expr> &result);
 };
 
 }

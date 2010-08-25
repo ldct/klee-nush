@@ -69,7 +69,8 @@ private:
 public:
   CachingSolver(Solver *s) : solver(s) {}
   ~CachingSolver() { cache.clear(); delete solver; }
-
+  
+  bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
   bool computeValue(const Query& query, ref<Expr> &result) {

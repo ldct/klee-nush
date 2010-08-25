@@ -273,7 +273,8 @@ public:
   IndependentSolver(Solver *_solver) 
     : solver(_solver) {}
   ~IndependentSolver() { delete solver; }
-
+ 
+  bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
   bool computeTruth(const Query&, bool &isValid);
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeValue(const Query&, ref<Expr> &result);
