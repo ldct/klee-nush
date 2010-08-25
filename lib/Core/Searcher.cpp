@@ -472,12 +472,12 @@ bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState
   for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
     BasicBlock *pred = *pi;
     BBLink link = std::make_pair(pred, bb);
-    std::map<BBLink, ExecutionState*>::iterator BBLinkState = pausedStates.find(link);
+    BBLinkMapES::iterator state = pausedStates.find(link);
 
     std::cerr << "\tpred state " << pred->getNameStr() << "...";
-    possibleMerges->insert(BBLinkState->second);
+    possibleMerges->insert(state->second);
 
-    if (BBLinkState == pausedStates.end()) {
+    if (state == pausedStates.end()) {
       std::cerr << "no\n";
       allOK = false;
     }
@@ -536,9 +536,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
 */    
       pausedBB.insert(p);    
     }
-
   }
-
 
   for (std::set<BasicBlock*>::const_iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
     BasicBlock* bb = *it;
