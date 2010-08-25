@@ -211,17 +211,20 @@ namespace klee {
     }
   };
 
-  typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
 
   class ExhaustiveMergingSearcher : public Searcher {
+
+    typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
+    typedef std::map<BBLink, ExecutionState*> BBLinkMapES;
+
     Executor &executor;
-    std::map<BBLink, ExecutionState*> statePausedAtBBPair;
+    BBLinkMapES pausedStates;
     Searcher *baseSearcher;
   	
   private:
-    //llvm::Instruction *getMergePoint(ExecutionState &es);
+    bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);
+    ExecutionState* doMerge(std::set<ExecutionState*> &possibleMerges);
     void cleanPausedStates();
-
 
   public:
     ExhaustiveMergingSearcher(Executor &executor, Searcher *baseSearcher);
