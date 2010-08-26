@@ -75,7 +75,7 @@ public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
   ~CexCachingSolver();
    
-  bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
+  //bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
   bool computeTruth(const Query&, bool &isValid);
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeValue(const Query&, ref<Expr> &result);
