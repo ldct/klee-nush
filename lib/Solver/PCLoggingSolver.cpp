@@ -67,7 +67,8 @@ public:
     delete printer;
     delete solver;
   }
-  
+
+  //bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
   bool computeTruth(const Query& query, bool &isValid) {
     startQuery(query, "Truth");
     bool success = solver->impl->computeTruth(query, isValid);

@@ -34,6 +34,8 @@ extern "C" {
   /// output files, etc.
   void klee_make_symbolic(void *addr, size_t nbytes, const char *name);
 
+  void klee_make_length_symbolic(void *addr, unsigned nbytes, const char *name);
+
   /// klee_range - Construct a symbolic value in the signed interval
   /// [begin,end).
   ///
@@ -96,11 +98,13 @@ extern "C" {
    */
   unsigned klee_is_symbolic(uintptr_t n);
 
+  void klee_log_state();
 
   /* The following intrinsics are primarily intended for internal use
      and may have peculiar semantics. */
 
   void klee_assume(uintptr_t condition);
+  void klee_force_assume(unsigned condition);
   void klee_warning(const char *message);
   void klee_warning_once(const char *message);
   void klee_prefer_cex(void *object, uintptr_t condition);
@@ -141,6 +145,13 @@ extern "C" {
 
   /* Print stack trace. */
   void klee_stack_trace(void);
+
+  int klee_strlen(char *str);
+  char * klee_strcat(char *dst, char *src);
+
+  void klee_NB_start();
+  void klee_eval_strlen(int len, char* str);
+  void klee_NB_stop();
 
 #ifdef __cplusplus
 }

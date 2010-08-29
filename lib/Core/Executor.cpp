@@ -2411,8 +2411,12 @@ void Executor::run(ExecutionState &initialState) {
   searcher = constructUserSearcher(*this);
 
   searcher->update(0, states, std::set<ExecutionState*>());
-
-  while (!states.empty() && !haltExecution) {
+  // XXX: states.empty() and searcher.empty() can disagree
+  // when using exhaustiveMergingSearcher which removes paused
+  // states from its own internal set of states but not from the
+  // executor's states. this is quite ugly.       
+  while (!states.empty() && !searcher->empty() && !haltExecution) {
+    
     ExecutionState &state = searcher->selectState();
     KInstruction *ki = state.pc;
     stepInstruction(state);
@@ -2740,6 +2744,19 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
     state.stack.back().allocas.push_back(mo);
 
   return os;
+}
+
+MemoryObject* Executor::executeNoBindAlloc(ExecutionState &state, unsigned size) 
+{                                       
+  MemoryObject *mo = memory->allocate(size, true, false, 0); //state.prevPC->inst);
+  if (!mo)
+    std::cerr << "xj: simpleAlloc failed to execute memory->allocate\n";
+  ObjectState *os = bindObjectInState(state, mo, true);
+  os->initializeToZero();
+  //for now set allocSite = 0, since allocSite seems like a purely debug value
+  
+  //normally we would execute bindLocal now, but there is nothing to bind this to...
+  return mo;
 }
 
 void Executor::executeAlloc(ExecutionState &state,

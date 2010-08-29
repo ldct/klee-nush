@@ -76,6 +76,7 @@ class Executor : public Interpreter {
   friend class RandomPathSearcher;
   friend class OwningSearcher;
   friend class WeightedRandomSearcher;
+  friend class ExhaustiveMergingSearcher;
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
 
@@ -216,6 +217,8 @@ private:
                     ref<Expr> p,
                     ExactResolutionList &results,
                     const std::string &name);
+
+  MemoryObject* executeNoBindAlloc(ExecutionState &state, unsigned size);
 
   /// Allocate and bind a new object in a particular state. NOTE: This
   /// function may fork.

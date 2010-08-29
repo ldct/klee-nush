@@ -67,6 +67,7 @@ HandlerInfo handlerInfo[] = {
   add("calloc", handleCalloc, true),
   add("free", handleFree, false),
   add("klee_assume", handleAssume, false),
+  add("klee_force_assume", handleForceAssume, false),
   add("klee_check_memory_access", handleCheckMemoryAccess, false),
   add("klee_get_valuef", handleGetValue, true),
   add("klee_get_valued", handleGetValue, true),
@@ -78,6 +79,8 @@ HandlerInfo handlerInfo[] = {
   add("klee_get_obj_size", handleGetObjSize, true),
   add("klee_get_errno", handleGetErrno, true),
   add("klee_is_symbolic", handleIsSymbolic, true),
+  add("klee_log_state", handleLogState, false),
+  add("klee_make_length_symbolic", handleMakeLengthSymbolic, false),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
   add("klee_merge", handleMerge, false),
@@ -91,6 +94,13 @@ HandlerInfo handlerInfo[] = {
   add("klee_alias_function", handleAliasFunction, false),
   add("malloc", handleMalloc, true),
   add("realloc", handleRealloc, true),
+  
+  add("klee_strlen", handleStrlen, true), //true ==> klee_strlen modifies target
+  add("klee_strcat", handleStrcat, true), //technically strcat also modifies target, but this is rarely used imo.
+  add("klee_eval_strlen", handleEvalStrlen, false),
+
+  add("klee_NB_start", handleNBStart, false),
+  add("klee_NB_stop", handleNBStop, false),
 
   // operator delete[](void*)
   add("_ZdaPv", handleDeleteArray, false),
@@ -272,6 +282,30 @@ void SpecialFunctionHandler::handleAssert(ExecutionState &state,
                                    "assert.err");
 }
 
+void SpecialFunctionHandler::handleNBStart(ExecutionState &state,
+                                          KInstruction *target,
+                                          std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size()==0 && "do not pass arguments to klee_NB_start");  
+  state.NBLock = new bool;
+  *(state.NBLock) = false;
+  //std::cerr << "lock " << state.NBLock << " has been created\n";
+}
+
+void SpecialFunctionHandler::handleNBStop(ExecutionState &state,
+                                          KInstruction *target,
+                                          std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size()==0 && "do not pass arguments to klee_NB_stop");
+  /// FIXME: This is classic thread-unsafe behaviour...
+  if (*(state.NBLock)) {
+    //std::cerr << "lock " << state.NBLock << " is already taken, dying...\n";
+    executor.terminateState(state);
+  } else {
+    //std::cerr << "lock " << state.NBLock << " is taken by me\n";
+    *(state.NBLock) = true;
+  }
+
+}
+
 void SpecialFunctionHandler::handleAssertFail(ExecutionState &state,
                                               KInstruction *target,
                                               std::vector<ref<Expr> > &arguments) {
@@ -357,11 +391,130 @@ void SpecialFunctionHandler::handleMalloc(ExecutionState &state,
   executor.executeAlloc(state, arguments[0], false, target);
 }
 
-void SpecialFunctionHandler::handleAssume(ExecutionState &state,
-                            KInstruction *target,
-                            std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size()==1 && "invalid number of arguments to klee_assume");
+void SpecialFunctionHandler::handleStrlen(ExecutionState &state,
+                                  KInstruction *target,
+                                  std::vector<ref<Expr> > &arguments) {
+                                  
+  ObjectPair op;
+  ref<Expr> addressExpr = arguments[0];
+  addressExpr = executor.toUnique(state, addressExpr);
+  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
+  if (!state.addressSpace.resolveOne(address, op))
+    assert(0 && "XXX out of bounds / multiple resolution unhandled");
+  const MemoryObject *mo = op.first;
+  const MemoryObject *mo_len = mo->length;
+  const ObjectState *os_len = state.addressSpace.findObject(mo_len);
+
   
+  ref<Expr> len_expr = os_len->read(0, 32);    
+  
+  //magic number 32 = 8 * sizeof(int)
+  //                = 8 * mo_len->size
+  //some assert in read() checks that width is a multiple of 8
+  //ref<Expr> should be something like (ReadLSB w32 0 arr1)
+
+/*debug
+  std::cerr << "strlen! "
+            << " mo->onlyTrackLen=" << mo->onlyTrackLength 
+            << " mo->name=" << mo->name 
+            << " mo_len->isALength=" << mo_len->isALength 
+            << " mo_len->size=" << mo_len->size 
+            << " len_expr=" << len_expr
+            << " \n";
+*/
+  
+  executor.bindLocal(target, state, len_expr);  
+}
+
+void SpecialFunctionHandler::handleStrcat(ExecutionState &state,
+                                          KInstruction *target,
+                                          std::vector<ref<Expr> > &arguments) {  
+  ObjectPair dst_op;
+  ref<Expr> addressExpr;
+  addressExpr = executor.toUnique(state, arguments[0]);
+  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
+  if (!state.addressSpace.resolveOne(address, dst_op))
+    assert(0 && "XXX out of bounds / multiple resolution unhandled");
+  const MemoryObject *dst_mo = dst_op.first;  
+  const MemoryObject *dst_mo_len = dst_mo->length;
+  const ObjectState *dst_os_len = state.addressSpace.findObject(dst_mo_len);
+
+  ref<Expr> dst_len_expr = dst_os_len->read(0, 32);    
+
+
+
+  ObjectPair src_op;
+  addressExpr = executor.toUnique(state, arguments[1]);
+  address = cast<ConstantExpr>(addressExpr);
+  if (!state.addressSpace.resolveOne(address, src_op))
+    assert(0 && "XXX out of bounds / multiple resolution unhandled");
+  const MemoryObject *src_mo = src_op.first;
+  const MemoryObject *src_mo_len = src_mo->length;
+  const ObjectState *src_os_len = state.addressSpace.findObject(src_mo_len);
+
+  ref<Expr> src_len_expr = src_os_len->read(0, 32);
+  
+  //std::cerr << "klee_strcat called, dst_len_expr = " << dst_len_expr << "; src_len_expr = " << src_len_expr << "\n";
+    
+  ObjectState *wos = state.addressSpace.getWriteable(dst_mo_len, dst_os_len);
+  ref<Expr> total_len_expr = AddExpr::create(dst_len_expr, src_len_expr);
+  //std::cerr << "total_len_expr = " << total_len_expr << "\n";
+  wos->write(0, total_len_expr);
+  
+  /* this proves that now, dst_mo_len's os_state has been modified
+  dst_os_len = state.addressSpace.findObject(dst_mo_len);
+  std::cerr << "dol = " << dst_os_len->read(0,32) << "\n";
+  */
+}
+
+
+void SpecialFunctionHandler::handleEvalStrlen(ExecutionState &state,
+                                              KInstruction *target,
+                                              std::vector<ref<Expr> > &arguments) {
+                                  
+  //get the string, and find mo->length
+  ObjectPair op;
+  ref<Expr> addressExpr = arguments[1];
+  addressExpr = executor.toUnique(state, addressExpr);
+  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
+  if (!state.addressSpace.resolveOne(address, op))    //resolveOne is used only when address is a pointer
+    assert(0 && "XXX out of bounds / multiple resolution unhandled");
+  const MemoryObject *mo = op.first;
+  const MemoryObject *mo_len = mo->length;
+  const ObjectState *os_len = state.addressSpace.findObject(mo_len);
+  ref<Expr> len_expr = os_len->read(0, 32);    
+  
+  
+  //get the actual integer
+  
+  ObjectPair op_i;
+  ref<Expr> actual_int = executor.toUnique(state, arguments[0]);
+  //std::cerr << "handleEvalStrlen called actual_int = " << actual_int << "\n";
+  
+  ref<Expr> e = EqExpr::create(len_expr, actual_int);
+  
+  bool res;
+  bool success = executor.solver->mustBeFalse(state, e, res);
+  assert(success && "FIXME: Unhandled solver failure");
+  
+  if (!res) {
+    executor.addConstraint(state, e);
+  } else {
+    executor.terminateState(state);
+  }
+
+  
+  //executor.bindLocal(target, state, len_expr);  
+  //instead, do addConstraint(eq)
+  
+}
+
+
+void SpecialFunctionHandler::assumeHelper(ExecutionState &state,
+                            KInstruction *target,
+                            std::vector<ref<Expr> > &arguments,
+                            bool force) {
+
   ref<Expr> e = arguments[0];
   
   if (e->getWidth() != Expr::Bool)
@@ -370,14 +523,34 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
   bool res;
   bool success = executor.solver->mustBeFalse(state, e, res);
   assert(success && "FIXME: Unhandled solver failure");
-  if (res) {
-    executor.terminateStateOnError(state, 
-                                   "invalid klee_assume call (provably false)",
-                                   "user.err");
-  } else {
+  
+  if (!res) {
     executor.addConstraint(state, e);
+    return;
   }
+
+  if (force) {
+    executor.terminateState(state);
+  } else {
+    executor.terminateStateOnError(state, "invalid klee_assume call (provably false)","user.err");
+  }
+
 }
+
+void SpecialFunctionHandler::handleAssume(ExecutionState &state,
+                            KInstruction *target,
+                            std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size()==1 && "invalid number of arguments to klee_assume");
+  assumeHelper(state, target, arguments, 0);
+}
+
+void SpecialFunctionHandler::handleForceAssume(ExecutionState &state,
+                            KInstruction *target,
+                            std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size()==1 && "invalid number of arguments to klee_force_assume");
+  assumeHelper(state, target, arguments, 1);
+}
+
 
 void SpecialFunctionHandler::handleIsSymbolic(ExecutionState &state,
                                 KInstruction *target,
@@ -618,6 +791,19 @@ void SpecialFunctionHandler::handleGetValue(ExecutionState &state,
   executor.executeGetValue(state, arguments[0], target);
 }
 
+void SpecialFunctionHandler::handleLogState(ExecutionState &state,
+                                            KInstruction *target,
+                                            std::vector<ref<Expr> > &arguments) {
+  
+  std::string name;
+  name = readStringAtAddress(state, arguments[0]);
+  std::cerr << "log state called from " << name << " depth = " << state.depth << " constraints = " << state.constraints.size() << "\n";
+  for(std::vector< ref<Expr> >::const_iterator it = state.constraints.begin(), ie = state.constraints.end(); it != ie; ++it) {
+    const ref<Expr> c = *it;
+    std::cerr << "constraints:\n"<<c<<"\n";
+  }
+}
+
 void SpecialFunctionHandler::handleDefineFixedObject(ExecutionState &state,
                                                      KInstruction *target,
                                                      std::vector<ref<Expr> > &arguments) {
@@ -685,6 +871,56 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
       executor.terminateStateOnError(*s, 
                                      "wrong size given to klee_make_symbolic[_name]", 
                                      "user.err");
+    }
+  }
+}
+
+void SpecialFunctionHandler::handleMakeLengthSymbolic(ExecutionState &state,
+                                                KInstruction *target,
+                                                std::vector<ref<Expr> > &arguments) {
+  std::string name;
+  assert(arguments.size()==3 && "invalid number of arguments to klee_make_symbolic");  
+  name = readStringAtAddress(state, arguments[2]);
+  
+  //std::cerr << "make_length_symbolic called len_rl.size=" << len_rl.size() << " \n";
+    
+  Executor::ExactResolutionList rl;
+  executor.resolveExact(state, arguments[0], rl, "make_symbolic");
+  
+  for (Executor::ExactResolutionList::iterator it = rl.begin(), 
+         ie = rl.end(); it != ie; ++it) {
+    
+    const ObjectState *old = it->first.second;
+    ExecutionState *s = it->second;
+    
+    //allocate space for len_mo
+    MemoryObject *len_mo = executor.executeNoBindAlloc(*s, 4);  //4-byte int
+    len_mo->setName(name + "_len");
+    len_mo->onlyTrackLength = 0;
+    len_mo->isALength = 1;  
+    executor.executeMakeSymbolic(*s, len_mo);    
+
+    MemoryObject *mo = (MemoryObject*) it->first.first;
+    mo->setName(name);
+    mo->onlyTrackLength = 1;
+    mo->isALength = 0;
+    
+    mo->length = len_mo;  //important! makes len_mo track mo->length
+    
+    if (old->readOnly) { 
+      executor.terminateStateOnError(*s, "cannot make readonly object symbolic", "user.err");
+      return;
+    } 
+
+    // FIXME: Type coercion should be done consistently somewhere.
+    bool res;
+    bool success = executor.solver->mustBeTrue(*s,EqExpr::create(ZExtExpr::create(arguments[1], Context::get().getPointerWidth()), mo->getSizeExpr()), res);
+    assert(success && "FIXME: Unhandled solver failure");
+    
+    if (res) {
+      executor.executeMakeSymbolic(*s, mo);
+    } else {      
+      executor.terminateStateOnError(*s, "wrong size given to klee_make_symbolic[_name]", "user.err");
     }
   }
 }

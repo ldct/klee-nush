@@ -94,6 +94,7 @@ public:
   StagedSolverImpl(IncompleteSolver *_primary, Solver *_secondary);
   ~StagedSolverImpl();
     
+  //bool stpsimplify(const Query& query, ref<Expr> &result);
   bool computeTruth(const Query&, bool &isValid);
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeValue(const Query&, ref<Expr> &result);

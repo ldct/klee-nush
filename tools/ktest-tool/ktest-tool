@@ -82,6 +82,9 @@ def main(args):
     op.add_option('','--write-ints', dest='writeInts', action='store_true',
                   default=False,
                   help='convert 4-byte sequences to integers')
+    op.add_option('','--compact-strlen', dest='cstrlen', action='store_true',
+                  default=False,
+                  help='only print strlen')
     
     opts,args = op.parse_args()
     if not args:
@@ -90,6 +93,12 @@ def main(args):
     for file in args:
         b = KTest.fromfile(file)
         pos = 0
+        if opts.cstrlen:
+            print file[8:10],
+            for i,(name,data) in enumerate(b.objects):
+                str = trimZeros(data)
+                print len(str),
+            continue
         print 'ktest file : %r' % file
         print 'args       : %r' % b.args
         print 'num objects: %r' % len(b.objects)
@@ -98,7 +107,6 @@ def main(args):
                 str = trimZeros(data)
             else:
                 str = data
-
             print 'object %4d: name: %r' % (i, name)
             print 'object %4d: size: %r' % (i, len(data))
             if opts.writeInts and len(data) == 4: 
@@ -110,3 +118,4 @@ def main(args):
 
 if __name__=='__main__':
     main(sys.argv)
+    print ''

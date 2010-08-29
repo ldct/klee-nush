@@ -972,6 +972,7 @@ public:
   ~FastCexSolver();
 
   IncompleteSolver::PartialValidity computeTruth(const Query&);  
+  //bool stpsimplify(const Query& query, ref<Expr> &result){return true;}
   bool computeValue(const Query&, ref<Expr> &result);
   bool computeInitialValues(const Query&,
                             const std::vector<const Array*> &objects,

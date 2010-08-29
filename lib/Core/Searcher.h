@@ -13,6 +13,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <utility> //make_pair
 #include <queue>
 
 // FIXME: Move out of header, use llvm streams.
@@ -47,11 +48,13 @@ namespace klee {
       os << "<unnamed searcher>\n";
     }
 
+    virtual int size() { return -1; }
+
     // pgbovine - to be called when a searcher gets activated and
     // deactivated, say, by a higher-level searcher; most searchers
     // don't need this functionality, so don't have to override.
-    virtual void activate() {}
-    virtual void deactivate() {}
+    virtual void activate() {};
+    virtual void deactivate() {};
 
     // utility functions
 
@@ -77,6 +80,8 @@ namespace klee {
                 const std::set<ExecutionState*> &addedStates,
                 const std::set<ExecutionState*> &removedStates);
     bool empty() { return states.empty(); }
+    int size() { return states.size(); }
+    
     void printName(std::ostream &os) {
       os << "DFSSearcher\n";
     }
@@ -90,7 +95,10 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::set<ExecutionState*> &addedStates,
                 const std::set<ExecutionState*> &removedStates);
+
     bool empty() { return states.empty(); }
+    int size() { return states.size(); }
+
     void printName(std::ostream &os) {
       os << "RandomSearcher\n";
     }
@@ -124,6 +132,7 @@ namespace klee {
                 const std::set<ExecutionState*> &addedStates,
                 const std::set<ExecutionState*> &removedStates);
     bool empty();
+    //XXX: why can't we this define here? also size() cannot be obtained as internally it's a pointer tree.
     void printName(std::ostream &os) {
       os << "WeightedRandomSearcher::";
       switch(type) {
@@ -198,6 +207,38 @@ namespace klee {
     bool empty() { return baseSearcher->empty() && statesAtMerge.empty(); }
     void printName(std::ostream &os) {
       os << "BumpMergingSearcher\n";
+    }
+  };
+
+
+  class ExhaustiveMergingSearcher : public Searcher {
+
+    typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
+    typedef std::map<BBLink, ExecutionState*> BBLinkMapES;
+    typedef std::map<ExecutionState*, ExecutionState*> ESMapES;
+
+    Executor &executor;
+    BBLinkMapES pausedStates;
+    Searcher *baseSearcher;
+    
+    ESMapES pseudoMerged;    
+  	
+  private:
+    bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);
+    ExecutionState* doMerge(std::set<ExecutionState*> &possibleMerges);
+    void cleanPausedStates();
+
+  public:
+    ExhaustiveMergingSearcher(Executor &executor, Searcher *baseSearcher);
+    ~ExhaustiveMergingSearcher();
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::set<ExecutionState*> &addedStates,
+                const std::set<ExecutionState*> &removedStates);
+    bool empty() { return baseSearcher->empty(); }// && statesAtMerge.empty(); }
+    void printName(std::ostream &os) {
+      os << "ExhaustiveMergingSearcher\n";
     }
   };
 

@@ -80,7 +80,6 @@ void DFSSearcher::update(ExecutionState *current,
           break;
         }
       }
-
       assert(ok && "invalid state removed");
     }
   }
@@ -453,6 +452,169 @@ void MergingSearcher::update(ExecutionState *current,
 }
 
 ///
+
+ExhaustiveMergingSearcher::ExhaustiveMergingSearcher(Executor &_executor, Searcher *_baseSearcher) 
+  : executor(_executor),
+    baseSearcher(_baseSearcher) {
+}
+
+ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
+  delete baseSearcher;
+}
+
+///
+
+bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState*> *possibleMerges)
+{
+  bool allOK = true;
+  for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
+    BasicBlock *pred = *pi;
+    BBLink link = std::make_pair(pred, bb);
+    BBLinkMapES::iterator state = pausedStates.find(link);
+
+    std::cerr << "\tpred state " << pred->getNameStr() << "...";
+    possibleMerges->insert(state->second);
+
+    if (state == pausedStates.end()) {
+      std::cerr << "no\n";
+      allOK = false;
+    }
+    else {
+      std::cerr << "ok\n";
+    }
+  }
+  return allOK;
+}
+
+//TODO: find most efficient representation of state
+ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &possibleMerges) 
+{
+  ExecutionState *target = *possibleMerges.begin();
+  possibleMerges.erase(target);
+
+  std::cerr << "merging...\n";
+
+  for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
+    ExecutionState *es = *ei;
+    if (target->merge(*es)) {
+      executor.terminateState(*es);
+    }
+    else {
+      std::cerr << "warning, merge failed\n";
+      pseudoMerged[target] = es;
+      //XXX: if merge failed because of different instruction pointers, do not pseudomerge.
+      //pseudomerges should only be used if the two path constraints / memory differ wildly, 
+      //and not for different instruction pointers.
+    }
+  }
+  return target;
+}
+
+void ExhaustiveMergingSearcher::cleanPausedStates() {
+  std::set<BasicBlock*> pausedBB;
+
+//  std::cerr << "cleanPausedState start, size=" << baseSearcher->size() << "/" << pausedStates.size()<< "\n";
+
+  if (baseSearcher->empty())
+    std::cerr << pausedStates.size() << "\n";
+
+  for (BBLinkMapES::const_iterator it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) 
+  {
+    ExecutionState *es = it->second;  //throw away it->first
+    BasicBlock *p = es->pc->inst->getParent();
+//if an es has only one predecessor then es must satisfy its only blocking input. 
+/*
+    if (++pred_begin(p) == pred_end(p)) {
+      std::cerr << "one-pred state found, pushing..." << std::endl;
+      baseSearcher->addState(es);
+      pausedStates.erase(std::make_pair(es->prevPC->inst->getParent(),p));
+      return;
+    }
+*/
+    if (baseSearcher->empty()) { ///make sure these debugs print only at the end
+/*    
+      BasicBlock *prevParent = es->prevPC->inst->getParent();
+      std::cerr << "paused state detected" 
+                << " at " << p->getNameStr() 
+                << " from " << prevParent->getNameStr()
+                << "\n"; 
+      //should be smt like "detected at bb4 from bb"
+*/    
+      pausedBB.insert(p);    
+    }
+  }
+
+  for (std::set<BasicBlock*>::const_iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
+    BasicBlock* bb = *it;
+    std::cerr << "paused basic block " << bb->getNameStr() << "\n";  
+
+    std::set<ExecutionState*> possibleMerges;
+
+    bool allOK = canMerge(bb, &possibleMerges);
+     
+    if (allOK) {
+      ExecutionState* target = doMerge(possibleMerges);
+      
+      //delete      
+      for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
+        BasicBlock *pred = *pi;
+        BBLink link = std::make_pair(pred, bb);
+        std::map<BBLink, ExecutionState*>::iterator BBLinkState = pausedStates.find(link);
+        pausedStates.erase(BBLinkState);
+      }
+      baseSearcher->addState(target);
+    }
+  }
+}
+
+ExecutionState &ExhaustiveMergingSearcher::selectState() {
+  ExecutionState &es = baseSearcher->selectState();
+  return es;  
+}
+
+void ExhaustiveMergingSearcher::update(ExecutionState *current,
+                                       const std::set<ExecutionState*> &addedStates,
+                                       const std::set<ExecutionState*> &removedStates) {
+/*
+  std::cerr << "update " << baseSearcher->size()
+            << "  " << pausedStates.size() 
+            << " +" << addedStates.size() 
+            << " -" << removedStates.size();
+*/
+  baseSearcher->update(current, addedStates, removedStates);
+
+
+  //only the first executionstate will trigger this
+  if (!current) { 
+//    std::cerr << "\n";
+    return;
+  }
+
+
+  std::set<ExecutionState*> newStates = addedStates;
+  newStates.insert(current);
+
+  for (std::set<ExecutionState*>::const_iterator it = newStates.begin(), ie = newStates.end(); it != ie; ++it) {
+    ExecutionState *es = *it;
+    Instruction *currInst = es->pc->inst;
+    Instruction *prevInst = es->prevPC->inst;
+//    const char *prevOPName = prevInst->getOpcodeName();
+
+//    std::cerr << " " << prevOPName;    
+    if (prevInst->getOpcode() == Instruction::Br) {
+      BasicBlock* currBB = currInst->getParent();
+      BasicBlock* prevBB = prevInst->getParent();
+      pausedStates[std::make_pair(prevBB, currBB)] = es;      
+      baseSearcher->removeState(es);
+//      std::cerr << " [removed]" << prevBB->getNameStr();
+    }
+  }
+//  std::cerr << " \n";
+  cleanPausedStates();
+}
+
+///
+
 
 BatchingSearcher::BatchingSearcher(Searcher *_baseSearcher,
                                    double _timeBudget,

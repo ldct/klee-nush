@@ -1,3 +1,7 @@
+klee-nush is an experimental fork of klee, forking from 106431 (on June 23).
+this readme file is the original klee file. for more info go to http://klee.llvm.org/.
+this is a test commit.
+
 //===----------------------------------------------------------------------===//
 // Klee Symbolic Virtual Machine
 //===----------------------------------------------------------------------===//

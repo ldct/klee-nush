@@ -67,6 +67,10 @@ namespace {
   cl::opt<bool>
   UseBumpMerge("use-bump-merge", 
            cl::desc("Enable support for klee_merge() (extra experimental)"));
+
+  cl::opt<bool>
+  UseExhaustiveMerge("use-exhaustive-merge", 
+           cl::desc("Enable exhaustive merge. States than can be merged will automatically be merged (extra experimental)"));
  
   cl::opt<bool>
   UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search", 
@@ -154,16 +158,17 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = new BatchingSearcher(searcher, BatchTime, BatchInstructions);
   }
 
-  if (UseMerge) {
-    assert(!UseBumpMerge);
+  assert(UseMerge + UseBumpMerge + UseExhaustiveMerge <= 1);
+
+  if (UseMerge)
     searcher = new MergingSearcher(executor, searcher);
-  } else if (UseBumpMerge) {    
+  if (UseBumpMerge)
     searcher = new BumpMergingSearcher(executor, searcher);
-  }
+  if (UseExhaustiveMerge)
+    searcher = new ExhaustiveMergingSearcher(executor, searcher);
   
-  if (UseIterativeDeepeningTimeSearch) {
+  if (UseIterativeDeepeningTimeSearch)
     searcher = new IterativeDeepeningTimeSearcher(searcher);
-  }
 
   std::ostream &os = executor.getHandler().getInfoStream();
 

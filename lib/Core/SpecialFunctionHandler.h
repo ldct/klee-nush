@@ -58,6 +58,7 @@ namespace klee {
     /* Convenience routines */
 
     std::string readStringAtAddress(ExecutionState &state, ref<Expr> address);
+    void assumeHelper(ExecutionState &state, KInstruction *target, std::vector< ref<Expr> > &arguments, bool force);
     
     /* Handlers */
 
@@ -73,13 +74,17 @@ namespace klee {
     HANDLER(handleDefineFixedObject);
     HANDLER(handleDelete);    
     HANDLER(handleDeleteArray);
+    HANDLER(handleEvalStrlen);
     HANDLER(handleExit);
     HANDLER(handleAliasFunction);
     HANDLER(handleFree);
+    HANDLER(handleForceAssume);
     HANDLER(handleGetErrno);
     HANDLER(handleGetObjSize);
     HANDLER(handleGetValue);
     HANDLER(handleIsSymbolic);
+    HANDLER(handleLogState);
+    HANDLER(handleMakeLengthSymbolic);
     HANDLER(handleMakeSymbolic);
     HANDLER(handleMalloc);
     HANDLER(handleMarkGlobal);
@@ -96,9 +101,17 @@ namespace klee {
     HANDLER(handleSetForking);
     HANDLER(handleSilentExit);
     HANDLER(handleStackTrace);
+
     HANDLER(handleUnderConstrained);
     HANDLER(handleWarning);
     HANDLER(handleWarningOnce);
+    
+    HANDLER(handleStrlen);
+    HANDLER(handleStrcat);
+    
+    HANDLER(handleNBStart);
+    HANDLER(handleNBStop);
+    
 #undef HANDLER
   };
 } // End klee namespace
