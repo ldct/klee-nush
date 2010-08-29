@@ -488,7 +488,7 @@ bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState
   return allOK;
 }
 
-
+//TODO: find most efficient representation of state
 ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &possibleMerges) 
 {
   ExecutionState *target = *possibleMerges.begin();
@@ -498,8 +498,16 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
-    target->merge(*es);
-    executor.terminateState(*es);
+    if (target->merge(*es)) {
+      executor.terminateState(*es);
+    }
+    else {
+      std::cerr << "warning, merge failed\n";
+      pseudoMerged[target] = es;
+      //XXX: if merge failed because of different instruction pointers, do not pseudomerge.
+      //pseudomerges should only be used if the two path constraints / memory differ wildly, 
+      //and not for different instruction pointers.
+    }
   }
   return target;
 }
@@ -514,7 +522,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
 
   for (BBLinkMapES::const_iterator it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) 
   {
-    ExecutionState *es = it->second;  //throw away the first
+    ExecutionState *es = it->second;  //throw away it->first
     BasicBlock *p = es->pc->inst->getParent();
 //if an es has only one predecessor then es must satisfy its only blocking input. 
 /*
