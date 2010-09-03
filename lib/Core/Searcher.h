@@ -215,13 +215,14 @@ namespace klee {
 
     typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
     typedef std::map<BBLink, ExecutionState*> BBLinkMapES;
-    typedef std::map<ExecutionState*, ExecutionState*> ESMapES;
-
+    //typedef std::map<ExecutionState*, ExecutionState*> ESMapES;
+    typedef std::multimap<ExecutionState*, ExecutionState*> ESMultimapES;
+    
     Executor &executor;
     BBLinkMapES pausedStates;
     Searcher *baseSearcher;
     
-    ESMapES pseudoMerged;    
+    ESMultimapES pseudoMergedChildren;    
   	
   private:
     bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);

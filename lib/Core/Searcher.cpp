@@ -497,15 +497,16 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
     if (target->merge(*es)) {
-      executor.terminateState(*es);
+      std::cerr << "merge ok!";
     }
     else {
-      std::cerr << "warning, merge failed\n";
-      pseudoMerged[target] = es;
+      std::cerr << "warning, merge failed; will now pseudomerge\n";
+      pseudoMergedChildren.insert(std::make_pair(target, es));
       //XXX: if merge failed because of different instruction pointers, do not pseudomerge.
       //pseudomerges should only be used if the two path constraints / memory differ wildly, 
       //and not for different instruction pointers.
     }
+    executor.terminateState(*es);
   }
   return target;
 }
@@ -569,6 +570,30 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {
   ExecutionState &es = baseSearcher->selectState();
+  
+  /*
+
+  if (our memory == NULL)
+    remember es
+
+  if (es has children)
+    set.insert(children) <- recursive insert  
+  else (es has no children)
+    return es
+  else (es is invalid)
+    es has dropped out! 
+    cleanPausedState
+    remember es
+
+  if (set.notempty)
+    pick one, return
+    
+  when we pick one and return, after a while it will drop out of selectState() range as it has met a br. also cleanPausedState will never ever unpause it (see note below). and es will get stuck in our memory (the only way for it to get unstuck is for es to be invalid, which only happens when es has been returned from this fn a few times, which only happens if es has no children, which means all the children have been paused, QED).
+
+  XXX: we must modify the unpause state algorithm so that partial states CANNOT be unpaused. 
+    
+  */
+  
   return es;  
 }
 

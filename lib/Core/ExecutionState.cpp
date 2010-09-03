@@ -153,6 +153,15 @@ bool ExecutionState::merge(const ExecutionState &b) {
   if (pc != b.pc)
     return false;
 
+  //quick hack to get user input
+  int ans;
+  std::cout << "ans pls\n";
+  std::cin >> ans;
+  if (ans == 42) {
+    std::cerr << "failing merge..\n";
+    return 0;
+  }
+
   // XXX is it even possible for these to differ? does it matter? probably
   // implies difference in object states?
   if (symbolics!=b.symbolics)
