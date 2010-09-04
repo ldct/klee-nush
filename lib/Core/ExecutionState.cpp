@@ -155,7 +155,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
   //quick hack to get user input
   int ans;
-  std::cout << "ans pls\n";
+  std::cout << "type 42 to fail merge\n";
   std::cin >> ans;
   if (ans == 42) {
     std::cerr << "failing merge..\n";

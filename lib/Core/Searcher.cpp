@@ -455,7 +455,8 @@ void MergingSearcher::update(ExecutionState *current,
 
 ExhaustiveMergingSearcher::ExhaustiveMergingSearcher(Executor &_executor, Searcher *_baseSearcher) 
   : executor(_executor),
-    baseSearcher(_baseSearcher) {
+    baseSearcher(_baseSearcher),
+    remES(NULL) {
 }
 
 ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
@@ -562,6 +563,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
         BBLink link = std::make_pair(pred, bb);
         std::map<BBLink, ExecutionState*>::iterator BBLinkState = pausedStates.find(link);
         pausedStates.erase(BBLinkState);
+        pausedStatesSet.erase(BBLinkState->second);
       }
       baseSearcher->addState(target);
     }
@@ -569,21 +571,32 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
 }
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {
-  ExecutionState &es = baseSearcher->selectState();
+
+  bool remESIsBad = (remES == NULL) || (pausedStatesSet.find(remES) != pausedStatesSet.end());
+  if (remESIsBad) { //remES has dropped out, choose another one.
+    cleanPausedStates();
+    remES = &baseSearcher->selectState();
+  }
+  
+  if (pseudoMergedChildren.count(remES) == 0) {
+    return *remES;
+  }
+  else {
+    std::cout << "remES has " << pseudoMergedChildren.count(remES) << "children!\n";
+    //add all children to stack
+  }
+  
   
   /*
-
-  if (our memory == NULL)
-    remember es
 
   if (es has children)
     set.insert(children) <- recursive insert  
   else (es has no children)
     return es
-  else (es is invalid)
+  else (es is paused)
     es has dropped out! 
     cleanPausedState
-    remember es
+    remember basesearcher's es
 
   if (set.notempty)
     pick one, return
@@ -591,10 +604,11 @@ ExecutionState &ExhaustiveMergingSearcher::selectState() {
   when we pick one and return, after a while it will drop out of selectState() range as it has met a br. also cleanPausedState will never ever unpause it (see note below). and es will get stuck in our memory (the only way for it to get unstuck is for es to be invalid, which only happens when es has been returned from this fn a few times, which only happens if es has no children, which means all the children have been paused, QED).
 
   XXX: we must modify the unpause state algorithm so that partial states CANNOT be unpaused. 
-    
+  also, if pseudo-merged es's are actually merged, we should remove the pseudoMerge.
+  
   */
   
-  return es;  
+  return *remES;  
 }
 
 void ExhaustiveMergingSearcher::update(ExecutionState *current,
@@ -630,6 +644,7 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
       BasicBlock* currBB = currInst->getParent();
       BasicBlock* prevBB = prevInst->getParent();
       pausedStates[std::make_pair(prevBB, currBB)] = es;      
+      pausedStatesSet.insert(es);
       baseSearcher->removeState(es);
 //      std::cerr << " [removed]" << prevBB->getNameStr();
     }

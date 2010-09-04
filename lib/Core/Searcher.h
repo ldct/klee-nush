@@ -219,10 +219,13 @@ namespace klee {
     typedef std::multimap<ExecutionState*, ExecutionState*> ESMultimapES;
     
     Executor &executor;
-    BBLinkMapES pausedStates;
     Searcher *baseSearcher;
     
+    BBLinkMapES pausedStates;
+    std::set<ExecutionState*> pausedStatesSet;
     ESMultimapES pseudoMergedChildren;    
+  	
+  	ExecutionState* remES;
   	
   private:
     bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);
