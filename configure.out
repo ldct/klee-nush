@@ -1,16 +1,16 @@
-running CONFIG_SHELL=/bin/bash /bin/bash ./configure  --with-llvm=/home/xuanji/llvm/llvm-2.7/ --with-uclibc=/home/xuanji/klee-uclibc/ --enable-posix-runtime  --no-create --no-recursion
+running CONFIG_SHELL=/bin/bash /bin/bash ./configure  --with-llvm=/home/xiangwen/llvm/llvm-2.7/  --no-create --no-recursion
 checking build system type... i686-pc-linux-gnu
 checking host system type... i686-pc-linux-gnu
 checking target system type... i686-pc-linux-gnu
 checking type of operating system we're going to host on... 
-checking llvm source dir... /home/xuanji/llvm/llvm-2.7
-checking llvm obj dir... /home/xuanji/llvm/llvm-2.7
+checking llvm source dir... /home/xiangwen/llvm/llvm-2.7
+checking llvm obj dir... /home/xiangwen/llvm/llvm-2.7
 checking llvm package version... 2.7
 checking llvm version major... 2
 checking llvm version minor... 7
 checking llvm is release version... 1
-checking uclibc... /home/xuanji/klee-uclibc
-checking POSIX runtime... yes
+checking uclibc... no
+checking POSIX runtime... default (disabled, no uclibc)
 checking runtime configuration... Release
 checking for gcc... gcc
 checking for C compiler default output file name... a.out

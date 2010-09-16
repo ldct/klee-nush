@@ -439,6 +439,7 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
+  bool stpsimplify(const Query& query, ref<Expr> &result);
 };
 
 static unsigned char *shared_memory_ptr;
@@ -485,6 +486,11 @@ STPSolverImpl::~STPSolverImpl() {
 
   vc_Destroy(vc);
 }
+
+bool STPSolverImpl::stpsimplify(const Query& query, ref<Expr> &result){
+vc_simplify(vc,&result);
+return true;
+} 
 
 /***/
 

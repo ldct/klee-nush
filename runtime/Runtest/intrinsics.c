@@ -102,7 +102,7 @@ uintptr_t klee_choose(uintptr_t n) {
   uintptr_t x;
   klee_make_symbolic(&x, sizeof x, "klee_choose");
   if(x >= n)
-    fprintf(stderr, "ERROR: max = %ld, got = %ld\n", n, x);
+    fprintf(stderr, "ERROR: max = %ld, got = %ld\n", (unsigned long int)n, (unsigned long int)x);
   assert(x < n);
   return x;
 }
