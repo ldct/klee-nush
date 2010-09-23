@@ -94,7 +94,7 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   
   for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
     const ref<Expr> d = *it;
-    std::cerr<<"rewrite constraint old\n"<<d<<"\n";
+    //std::cerr<<"rewrite constraint old\n"<<d<<"\n";
   }
 
   for (ConstraintManager::constraints_ty::const_iterator 
@@ -159,7 +159,7 @@ void ConstraintManager::addConstraint(ref<Expr> e) {
   e = simplifyExpr(e);
   for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
     const ref<Expr> d = *it;
-    std::cerr<<"rewrite constraint new\n"<<d<<"\n";
+    //std::cerr<<"rewrite constraint new\n"<<d<<"\n";
   }
 
   addConstraintInternal(e);

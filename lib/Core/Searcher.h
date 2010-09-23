@@ -16,6 +16,8 @@
 #include <utility> //make_pair
 #include <queue>
 
+#include "llvm/Support/CFG.h"
+
 // FIXME: Move out of header, use llvm streams.
 #include <ostream>
 
@@ -243,12 +245,16 @@ namespace klee {
     BBLinkMapES pausedStates;
     ESMapESSet pseudoMergedChildren;
   	
-  	ExecutionState* remES;
+  	ExecutionState* selectStateES;
+  	std::set<ExecutionState*> selectStateESSet;
   	
   private:
     bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);
     ExecutionState* doMerge(std::set<ExecutionState*> &possibleMerges);
     void cleanPausedStates();
+
+    //From BBLinkMapES pausedStates, get a list of all parents of ES. 
+    std::set<llvm::BasicBlock*> getPausedBasicBlocks();
 
   public:
     ExhaustiveMergingSearcher(Executor &executor, Searcher *baseSearcher);
