@@ -211,19 +211,37 @@ namespace klee {
   };
 
 
+  /*
+  Unidirectional Tree
+  Similar to set and multimap
+  
+  r --> a --> b
+          --> c
+    --> d --> e
+  
+  used to replace pseudoMergedChildren with cleaner syntax and possibility of more functions
+  
+  
+  template<class T>
+  class UDTRee {
+    
+    std::set<T> allNodes;
+    std::multimap<T,T> 
+    
+  }
+  */
+
   class ExhaustiveMergingSearcher : public Searcher {
 
     typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
     typedef std::map<BBLink, ExecutionState*> BBLinkMapES;
-    //typedef std::map<ExecutionState*, ExecutionState*> ESMapES;
-    typedef std::multimap<ExecutionState*, ExecutionState*> ESMultimapES;
+    typedef std::map<ExecutionState*, std::set<ExecutionState*> > ESMapESSet;
     
     Executor &executor;
     Searcher *baseSearcher;
     
     BBLinkMapES pausedStates;
-    std::set<ExecutionState*> pausedStatesSet;
-    ESMultimapES pseudoMergedChildren;    
+    ESMapESSet pseudoMergedChildren;
   	
   	ExecutionState* remES;
   	

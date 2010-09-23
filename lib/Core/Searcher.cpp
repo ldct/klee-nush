@@ -497,12 +497,13 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
-    if (target->merge(*es)) {
+    bool mergeOK = target->merge(*es);
+    if (mergeOK) {
       std::cerr << "merge ok!";
     }
     else {
       std::cerr << "warning, merge failed; will now pseudomerge\n";
-      pseudoMergedChildren.insert(std::make_pair(target, es));
+      pseudoMergedChildren[target].insert( es);
       //XXX: if merge failed because of different instruction pointers, do not pseudomerge.
       //pseudomerges should only be used if the two path constraints / memory differ wildly, 
       //and not for different instruction pointers.
@@ -563,50 +564,15 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
         BBLink link = std::make_pair(pred, bb);
         std::map<BBLink, ExecutionState*>::iterator BBLinkState = pausedStates.find(link);
         pausedStates.erase(BBLinkState);
-        pausedStatesSet.erase(BBLinkState->second);
       }
       baseSearcher->addState(target);
     }
   }
 }
 
-ExecutionState &ExhaustiveMergingSearcher::selectState() {
-
-  bool remESIsBad = (remES == NULL) || (pausedStatesSet.find(remES) != pausedStatesSet.end());
-  if (remESIsBad) { //remES has dropped out, choose another one.
-    cleanPausedStates();
-    remES = &baseSearcher->selectState();
-  }
+ExecutionState &ExhaustiveMergingSearcher::selectState() {  
   
-  if (pseudoMergedChildren.count(remES) == 0) {
-    return *remES;
-  }
-  else {
-    std::cout << "remES has " << pseudoMergedChildren.count(remES) << "children!\n";
-    //add all children to stack
-  }
-  
-  
-  /*
-
-  if (es has children)
-    set.insert(children) <- recursive insert  
-  else (es has no children)
-    return es
-  else (es is paused)
-    es has dropped out! 
-    cleanPausedState
-    remember basesearcher's es
-
-  if (set.notempty)
-    pick one, return
-    
-  when we pick one and return, after a while it will drop out of selectState() range as it has met a br. also cleanPausedState will never ever unpause it (see note below). and es will get stuck in our memory (the only way for it to get unstuck is for es to be invalid, which only happens when es has been returned from this fn a few times, which only happens if es has no children, which means all the children have been paused, QED).
-
-  XXX: we must modify the unpause state algorithm so that partial states CANNOT be unpaused. 
-  also, if pseudo-merged es's are actually merged, we should remove the pseudoMerge.
-  
-  */
+  remES = &baseSearcher->selectState();  
   
   return *remES;  
 }
@@ -625,7 +591,6 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
 
   //only the first executionstate will trigger this
   if (!current) { 
-//    std::cerr << "\n";
     return;
   }
 
@@ -637,16 +602,13 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
     ExecutionState *es = *it;
     Instruction *currInst = es->pc->inst;
     Instruction *prevInst = es->prevPC->inst;
-//    const char *prevOPName = prevInst->getOpcodeName();
-
-//    std::cerr << " " << prevOPName;    
+//  const char *prevOPName = prevInst->getOpcodeName();  std::cerr << " " << prevOPName;    
     if (prevInst->getOpcode() == Instruction::Br) {
       BasicBlock* currBB = currInst->getParent();
       BasicBlock* prevBB = prevInst->getParent();
       pausedStates[std::make_pair(prevBB, currBB)] = es;      
-      pausedStatesSet.insert(es);
       baseSearcher->removeState(es);
-//      std::cerr << " [removed]" << prevBB->getNameStr();
+//    std::cerr << " [removed]" << prevBB->getNameStr();
     }
   }
 //  std::cerr << " \n";
