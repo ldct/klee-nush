@@ -468,14 +468,6 @@ ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
 bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState*> *possibleMerges)
 {
 
-/*
-  XXX: putting this is causes merge to fail. WHY???
-  
-  if (possibleMerges->size() < 1) {
-    std::cerr << "canMerge failed on size = " << possibleMerges->size() << "\n";
-    return false;
-  }
-*/
   bool allOK = true;
   for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
     BasicBlock *pred = *pi;
@@ -493,7 +485,6 @@ bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState
       std::cerr << "ok\n";
     }
   }
-  std::cerr << "\n";
   return allOK;
 }
 
@@ -502,23 +493,44 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
   ExecutionState *target = *possibleMerges.begin();
   possibleMerges.erase(target);
 
-  std::cerr << "merging..." << possibleMerges.size() << "\n";
+  std::set<ExecutionState*> mergeChildren;
+
+  if (pseudoMergedChildren.find(target) != pseudoMergedChildren.end()) {
+    std::set<ExecutionState*> targetC = pseudoMergedChildren[target];
+    mergeChildren.insert(targetC.begin(), targetC.end());
+  }
+
+  pseudoMergedChildren[target].clear();
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
+    
+    mergeChildren.insert(es);
+
+    if (pseudoMergedChildren.find(es) != pseudoMergedChildren.end()) {
+      std::set<ExecutionState*> esC = pseudoMergedChildren[es];
+      mergeChildren.insert(esC.begin(), esC.end());
+    }
+  }
+
+  std::cerr << "merging..." << possibleMerges.size() << "\n";
+
+  for (std::set<ExecutionState*>::iterator ei = mergeChildren.begin(), ee = mergeChildren.end(); ei != ee; ++ei) {
+    ExecutionState *es = *ei;
+
     bool mergeOK = target->merge(*es);
     if (mergeOK) {
       std::cerr << "merge ok! \n";
+      executor.terminateState(*es);
     }
     else {
-      std::cerr << "warning, merge failed; will now pseudomerge\n";
+      std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n";
       pseudoMergedChildren[target].insert(es);
+      
       //TODO: if merge failed because of different instruction pointers, do not pseudomerge.
       //pseudomerges should only be used if the two path constraints / memory differ wildly, 
       //and not for different instruction pointers.
-      //TODO: pseudomerge things that are pseudomerged. shouldn't be hard.
     }
-    executor.terminateState(*es);
   }
   return target;
 }
