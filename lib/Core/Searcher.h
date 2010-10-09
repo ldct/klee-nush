@@ -15,6 +15,7 @@
 #include <map>
 #include <utility> //make_pair
 #include <queue>
+#include <list>
 
 #include "llvm/Support/CFG.h"
 
@@ -244,9 +245,9 @@ namespace klee {
     
     BBLinkMapES pausedStates;
     ESMapESSet pseudoMergedChildren;
+    std::set<ExecutionState*> ignoreUpdate; //ignore all that are placed in pseudoMergedChildren. TODO: move to data struct
   	
-  	ExecutionState* selectStateES;
-  	std::set<ExecutionState*> selectStateESSet;
+  	std::list<ExecutionState*> selectStateESList;
   	
   private:
     bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);

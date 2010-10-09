@@ -456,7 +456,7 @@ void MergingSearcher::update(ExecutionState *current,
 ExhaustiveMergingSearcher::ExhaustiveMergingSearcher(Executor &_executor, Searcher *_baseSearcher) 
   : executor(_executor),
     baseSearcher(_baseSearcher),
-    selectStateES(NULL) {
+    selectStateESList(NULL) {
 }
 
 ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
@@ -467,7 +467,7 @@ ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
 
 bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState*> *possibleMerges)
 {
-
+  std::cerr << "\n";
   bool allOK = true;
   for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
     BasicBlock *pred = *pi;
@@ -493,29 +493,32 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
   ExecutionState *target = *possibleMerges.begin();
   possibleMerges.erase(target);
 
-  std::set<ExecutionState*> mergeChildren;
+  std::set<ExecutionState*> allPossibleMerges;
 
   if (pseudoMergedChildren.find(target) != pseudoMergedChildren.end()) {
     std::set<ExecutionState*> targetC = pseudoMergedChildren[target];
-    mergeChildren.insert(targetC.begin(), targetC.end());
+    allPossibleMerges.insert(targetC.begin(), targetC.end());
   }
-
+  
+  ignoreUpdate.erase(pseudoMergedChildren[target].begin(), pseudoMergedChildren[target].end());
   pseudoMergedChildren[target].clear();
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
     
-    mergeChildren.insert(es);
+    allPossibleMerges.insert(es);
 
     if (pseudoMergedChildren.find(es) != pseudoMergedChildren.end()) {
       std::set<ExecutionState*> esC = pseudoMergedChildren[es];
-      mergeChildren.insert(esC.begin(), esC.end());
+      pseudoMergedChildren[es].clear();      
+      ignoreUpdate.erase(esC.begin(), esC.end());
+      allPossibleMerges.insert(esC.begin(), esC.end());
     }
   }
 
   std::cerr << "merging..." << possibleMerges.size() << "\n";
 
-  for (std::set<ExecutionState*>::iterator ei = mergeChildren.begin(), ee = mergeChildren.end(); ei != ee; ++ei) {
+  for (std::set<ExecutionState*>::iterator ei = allPossibleMerges.begin(), ee = allPossibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
 
     bool mergeOK = target->merge(*es);
@@ -526,6 +529,7 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
     else {
       std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n";
       pseudoMergedChildren[target].insert(es);
+      ignoreUpdate.insert(es);
       
       //TODO: if merge failed because of different instruction pointers, do not pseudomerge.
       //pseudomerges should only be used if the two path constraints / memory differ wildly, 
@@ -533,11 +537,12 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
     }
   }
   return target;
+  //only target will be added back from baseSearcher. the pseudoMergedChildren won't.
 }
 
 std::set<BasicBlock*> ExhaustiveMergingSearcher::getPausedBasicBlocks() {
 
-  //TODO: it map be possible to assert that pausedBB == { k | there exist ((?->k),v) in pausedStates}
+  //TODO: it may be possible to assert that pausedBB == { k | there exist ((?->k),v) in pausedStates}
 
   std::set<BasicBlock*> pausedBB;
 
@@ -566,6 +571,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
       ExecutionState* target = doMerge(possibleMerges);
       
       //empty pausedStates
+      //TODO: some assumptions here?
       for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
         BasicBlock *pred = *pi;
         BBLink link = std::make_pair(pred, bb);
@@ -587,17 +593,30 @@ ExecutionState &ExhaustiveMergingSearcher::selectState() {
   ESs in pseudoMergedChildren kind of just "forward shadow" their parent.
   */
   
-  selectStateES = &baseSearcher->selectState();  
+  if (selectStateESList.empty()) {
+    ExecutionState* es = &baseSearcher->selectState();
+    if (pseudoMergedChildren.find(es) == pseudoMergedChildren.end()) {
+      return *es;
+    }
+    std::set<ExecutionState*> children = pseudoMergedChildren[es];
+    selectStateESList.insert(selectStateESList.end(), children.begin(), children.end());
+    selectStateESList.push_back(es);
+  }
+  ExecutionState* es = selectStateESList.front();
+  selectStateESList.pop_front();
+  return *es;
   
-  return *selectStateES;  
 }
 
 void ExhaustiveMergingSearcher::update(ExecutionState *current,
                                        const std::set<ExecutionState*> &addedStates,
                                        const std::set<ExecutionState*> &removedStates) {
 
-  //TODO: if it's a pseudoMergedChild (supposed to shadow parent) don't do any of this.
-
+  if (ignoreUpdate.find(current) != ignoreUpdate.end()) {
+    std::cerr << "ignoring an update...\n";
+    return;
+  }
+  
   baseSearcher->update(current, addedStates, removedStates);
 
   if (!current) { 
