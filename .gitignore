@@ -3,12 +3,12 @@
 *.exp
 *.config
 Release/
-Release+Asserts/
+
 config.status
 include/klee/Config/config.h
 lib/*/Release/
 runtime/*/Release/
-runtime/*/Release+Asserts/
+
 stp/*/Release/
 test/*/Output/
 test/*/*/Output/
