@@ -73,6 +73,7 @@ ExecutionState::ExecutionState(KFunction *kf)
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
+    ignoreUpdate(0),
     ptreeNode(0) {
   pushFrame(0, kf);
 }
@@ -82,6 +83,7 @@ ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     underConstrained(false),
     constraints(assumptions),
     queryCost(0.),
+    ignoreUpdate(0),
     ptreeNode(0) {
 }
 

@@ -245,7 +245,6 @@ namespace klee {
     
     BBLinkMapES pausedStates;
     ESMapESSet pseudoMergedChildren;
-    std::set<ExecutionState*> ignoreUpdate; //ignore all that are placed in pseudoMergedChildren. TODO: move to data struct
   	
   	std::list<ExecutionState*> selectStateESList;
   	

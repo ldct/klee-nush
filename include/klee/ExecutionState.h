@@ -98,6 +98,9 @@ public:
   /// the rest, seeing the lock taken, will die
   bool *NBLock;
 
+  /// ignore updates to this executionstate;
+  bool ignoreUpdate;
+
   std::map<const std::string*, std::set<unsigned> > coveredLines;
   PTreeNode *ptreeNode;
 
@@ -117,7 +120,7 @@ public:
   void removeFnAlias(std::string fn);
   
 private:
-  ExecutionState() : fakeState(false), underConstrained(0), ptreeNode(0) {};
+  ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0) {};
 
 public:
   ExecutionState(KFunction *kf);
