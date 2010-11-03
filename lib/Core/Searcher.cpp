@@ -499,8 +499,7 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
     std::set<ExecutionState*> targetC = pseudoMergedChildren[target];
     allPossibleMerges.insert(targetC.begin(), targetC.end());
   }
-  
-  ignoreUpdate.erase(pseudoMergedChildren[target].begin(), pseudoMergedChildren[target].end());
+
   pseudoMergedChildren[target].clear();
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
@@ -510,8 +509,8 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 
     if (pseudoMergedChildren.find(es) != pseudoMergedChildren.end()) {
       std::set<ExecutionState*> esC = pseudoMergedChildren[es];
-      pseudoMergedChildren[es].clear();      
-      ignoreUpdate.erase(esC.begin(), esC.end());
+      pseudoMergedChildren[es].clear();
+
       allPossibleMerges.insert(esC.begin(), esC.end());
     }
   }
@@ -529,7 +528,7 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
     else {
       std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n";
       pseudoMergedChildren[target].insert(es);
-      ignoreUpdate.insert(es);
+      es->ignoreUpdate = 1;
       
       //TODO: if merge failed because of different instruction pointers, do not pseudomerge.
       //pseudomerges should only be used if the two path constraints / memory differ wildly, 
@@ -566,10 +565,10 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     BasicBlock* bb = *it;
     std::set<ExecutionState*> possibleMerges;
     bool allOK = canMerge(bb, &possibleMerges);
-         
+ 
     if (allOK) {
       ExecutionState* target = doMerge(possibleMerges);
-      
+
       //empty pausedStates
       //TODO: some assumptions here?
       for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
@@ -611,15 +610,15 @@ ExecutionState &ExhaustiveMergingSearcher::selectState() {
 void ExhaustiveMergingSearcher::update(ExecutionState *current,
                                        const std::set<ExecutionState*> &addedStates,
                                        const std::set<ExecutionState*> &removedStates) {
-
-  if (ignoreUpdate.find(current) != ignoreUpdate.end()) {
-    std::cerr << "ignoring an update...\n";
-    return;
-  }
   
   baseSearcher->update(current, addedStates, removedStates);
 
   if (!current) { 
+    return;
+  }
+
+  if (current->ignoreUpdate) {
+    std::cerr << "ignoring an update...\n";
     return;
   }
 
