@@ -148,6 +148,15 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
   return os;
 }
 
+/*
+bool ExecutionState::simplify(){
+for(std::vector< ref<Expr> >::const_iterator it = state.constraints.begin(), ie = state.constraints.end();it!=ie;it++){
+	const ref<Expr> c = *it;
+	DO SOMETHING HERE ARET tjbkas hebnw8s
+}
+}
+
+*/
 bool ExecutionState::merge(const ExecutionState &b) {
   if (DebugLogStateMerge)
     std::cerr << "-- attempting merge of A:" 
@@ -161,7 +170,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   std::cin >> ans;
   if (ans == 42) {
     std::cerr << "failing merge..\n";
-    return 0;
+    return false;
   }
 
   // XXX
