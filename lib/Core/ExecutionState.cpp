@@ -164,11 +164,8 @@ bool ExecutionState::merge(const ExecutionState &b) {
     return 0;
   }
 
-  // XXX is it even possible for these to differ? does it matter? probably
-  // implies difference in object states?
-  if (symbolics!=b.symbolics)
-    return false;
-
+  // XXX
+  assert(symbolics==b.symbolics && "Symbolics differ!");
   {
     std::vector<StackFrame>::const_iterator itA = stack.begin();
     std::vector<StackFrame>::const_iterator itB = b.stack.begin();
