@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <utility> //pair
 
 namespace klee {
   class Array;
@@ -120,7 +121,9 @@ public:
   void removeFnAlias(std::string fn);
   
 private:
-  ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0) {};
+  ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0) {};   
+  //XXX XXX XXX XXX
+  std::map<ref<Expr>, unsigned> bindings;
 
 public:
   ExecutionState(KFunction *kf);
@@ -143,6 +146,7 @@ public:
     constraints.addConstraint(e); 
   }
 
+  ref<Expr> simplifier(ref<Expr> e, std::set< std::pair<ref<Expr>,bool> > pairs);
   bool merge(const ExecutionState &b);
   void dumpStack(std::ostream &out) const;
 };
