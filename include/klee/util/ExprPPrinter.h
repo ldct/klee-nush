@@ -11,6 +11,7 @@
 #define KLEE_EXPRPPRINTER_H
 
 #include "klee/Expr.h"
+#include <map>
 
 namespace klee {
   class ConstraintManager;
@@ -55,6 +56,9 @@ namespace klee {
     /// beginning of a line then printing will not resume at the
     /// correct position following any output line breaks.
     static void printSingleExpr(std::ostream &os, const ref<Expr> &e);
+    
+    /// Same as above, but also return bindings (for simplifier as a matter of fact)
+    static std::map<ref<Expr>, unsigned int> printSingleExprAndReturnBindings(std::ostream &os, const ref<Expr> &e);
 
     static void printConstraints(std::ostream &os,
                                  const ConstraintManager &constraints);

@@ -14,6 +14,8 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/ExprBuilder.h"
+#include "klee/util/ExprPPrinter.h"
+
 
 #include "klee/Expr.h"
 
@@ -58,7 +60,7 @@ StackFrame::StackFrame(const StackFrame &s)
 }
 
 StackFrame::~StackFrame() { 
-  delete[] locals; 
+  delete[] locals;
 }
 
 /***/
@@ -149,57 +151,65 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
   return os;
 }
 
+ref<Expr> ExecutionState::simplify(ref<Expr> e) {
+  bindings = ExprPPrinter::printSingleExprAndReturnBindings(std::cerr, e);
+
+  std::set<std::pair<ref<Expr>,bool> > empty;
+  
+  return simplifier(e, empty);
+}
 
 ref<Expr> ExecutionState::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,bool> > pairs){
-	if(e->getKind()==Expr::And||e->getKind()==Expr::Or){//if e can be split
-		ref<Expr> a = e->getKid(0);
-		ref<Expr> b = e->getKid(1);
+  if (e->getKind()==Expr::And || e->getKind()==Expr::Or) {
+//if e can be split  
+    ref<Expr> a = e->getKid(0);
+    ref<Expr> b = e->getKid(1);
 
     klee::ExprBuilder *builder;
 
-		ref<Expr> T = builder->True();
-		ref<Expr> F = builder->False();
+    ref<Expr> T = builder->True();
+    ref<Expr> F = builder->False();
 
-		//substitute the SourChicken principle
-		if (pairs.end()!=(pairs.find(std::make_pair(a,true)))) a=T;
-		if (pairs.end()!=(pairs.find(std::make_pair(a,false)))) a=F;
-		if (pairs.end()!=(pairs.find(std::make_pair(b,true)))) b=T;
-		if (pairs.end()!=(pairs.find(std::make_pair(b,false)))) b=F;
+    //substitute the SourChicken principle
+    if (pairs.end()!=(pairs.find(std::make_pair(a,true)))) a=T;
+    if (pairs.end()!=(pairs.find(std::make_pair(a,false)))) a=F;
+    if (pairs.end()!=(pairs.find(std::make_pair(b,true)))) b=T;
+    if (pairs.end()!=(pairs.find(std::make_pair(b,false)))) b=F;
 
-		bool aInBindings = (bindings.find(a) != bindings.end());
-		bool bInBindings = (bindings.find(b) != bindings.end());
-		std::set< std::pair<ref<Expr>,bool> > pairsp = pairs;
+    bool aInBindings = (bindings.find(a) != bindings.end());
+    bool bInBindings = (bindings.find(b) != bindings.end());
+    std::set< std::pair<ref<Expr>,bool> > pairsp = pairs;
 
-		if(e->getKind()==Expr::Or && aInBindings) {//make all a in b into false		
-			pairsp.insert(std::make_pair(a,false));
-			b=simplifier(b,pairsp);
-		}
-		else if(e->getKind()==Expr::And && aInBindings) {//make all a in b into true		
-			pairsp.insert(std::make_pair(a,true));
-			b=simplifier(b,pairsp);
-		}
-		else if(e->getKind()==Expr::Or && bInBindings) {//make all b in a into false		
-			pairsp.insert(std::make_pair(a,false));
-			a=simplifier(a,pairsp);
-		}
-		else if(e->getKind()==Expr::And && bInBindings) {//make all b in a into true		
-			pairsp.insert(std::make_pair(a,true));
-			a=simplifier(a,pairsp);
-		}
-		else{
-			a=simplifier(a,pairsp);
-			b=simplifier(b,pairsp);
-		}
-	
-		//basic set theory
-		if(e->getKind()==Expr::And && (a==F||b==F)) return F;
-		else if(e->getKind()==Expr::Or && (a==T||b==T)) return T;
-		else if(e->getKind()==Expr::And && a==T) return b;
-		else if(e->getKind()==Expr::And && b==T) return a;
-		else if(e->getKind()==Expr::Or && a==F) return b;
-		else if(e->getKind()==Expr::Or && b==F) return a;
-	}
-	return e;
+    if(e->getKind()==Expr::Or && aInBindings) {//make all a in b into false		
+      pairsp.insert(std::make_pair(a,false));
+      b=simplifier(b,pairsp);
+    }
+    else if(e->getKind()==Expr::And && aInBindings) {//make all a in b into true		
+      pairsp.insert(std::make_pair(a,true));
+      b=simplifier(b,pairsp);
+    }
+    else if(e->getKind()==Expr::Or && bInBindings) {//make all b in a into false		
+      pairsp.insert(std::make_pair(a,false));
+      a=simplifier(a,pairsp);
+    }
+    else if(e->getKind()==Expr::And && bInBindings) {//make all b in a into true		
+      pairsp.insert(std::make_pair(a,true));
+      a=simplifier(a,pairsp);
+    }
+    else{
+      a=simplifier(a,pairsp);
+      b=simplifier(b,pairsp);
+    }
+
+    //basic set theory
+    if(e->getKind()==Expr::And && (a==F||b==F)) return F;
+    else if(e->getKind()==Expr::Or && (a==T||b==T)) return T;
+    else if(e->getKind()==Expr::And && a==T) return b;
+    else if(e->getKind()==Expr::And && b==T) return a;
+    else if(e->getKind()==Expr::Or && a==F) return b;
+    else if(e->getKind()==Expr::Or && b==F) return a;
+  }
+  return e;
 }
 
 bool ExecutionState::merge(const ExecutionState &b) {
