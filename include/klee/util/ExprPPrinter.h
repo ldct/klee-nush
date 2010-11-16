@@ -63,6 +63,10 @@ namespace klee {
     static void printConstraints(std::ostream &os,
                                  const ConstraintManager &constraints);
 
+    //debug function
+    static void printSimplifiedConstraints(std::ostream &os,
+                                           const ConstraintManager &constraints);
+
     static void printQuery(std::ostream &os,
                            const ConstraintManager &constraints,
                            const ref<Expr> &q,
