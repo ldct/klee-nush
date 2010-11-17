@@ -57,4 +57,13 @@ Kleaver Internal
        builder.
 
 
+klee-merge
+--
 
+ o Complete simplifier and test it out.
+ o Create a method to evaluate complexity of expression (for eg, size of common
+   Exprs) and pseudoMerge if threshold is passed. Then evaluate the effect of
+   shifting the threshold around.
+ o Make exhaustivemergingsearcher work for loops
+ o Make a searcher that can handle larger programs. May sacrifice optimality.
+ o Define correctness and optimality
