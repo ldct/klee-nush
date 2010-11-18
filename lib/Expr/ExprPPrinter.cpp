@@ -83,8 +83,8 @@ public:
 class PPrinter : public ExprPPrinter {
 public:
   std::set<const Array*> usedArrays;
-private:
   std::map<ref<Expr>, unsigned> bindings;
+private:
   std::map<const UpdateNode*, unsigned> updateBindings;
   std::set< ref<Expr> > couldPrint, shouldPrint;
   std::set<const UpdateNode*> couldPrintUpdates, shouldPrintUpdates;
@@ -489,11 +489,28 @@ void ExprPPrinter::printSingleExpr(std::ostream &os, const ref<Expr> &e) {
   p.print(e, PC);
 }
 
+std::map<ref<Expr>, unsigned> ExprPPrinter::printSingleExprAndReturnBindings(std::ostream &os, const ref<Expr> &e) {
+  PPrinter p(os);
+  p.scan(e);
+
+  PrintContext PC(os);
+  p.print(e,PC);
+
+  return p.bindings;
+}
+
 void ExprPPrinter::printConstraints(std::ostream &os,
                                     const ConstraintManager &constraints) {
   printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
+void ExprPPrinter::printSimplifiedConstraints(std::ostream &os,
+					      const ConstraintManager &constraints) {
+  os << "simplified: \n";
+  //TODO: simplify constraints
+  printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
+}
+					   
 
 void ExprPPrinter::printQuery(std::ostream &os,
                               const ConstraintManager &constraints,
