@@ -467,6 +467,7 @@ ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
 
 bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState*> *possibleMerges)
 {
+  //TODO: might need to ignore the "return" bb...
   std::cerr << "\n";
   bool allOK = true;
   for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {

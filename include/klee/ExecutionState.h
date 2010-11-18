@@ -122,7 +122,6 @@ public:
   
 private:
   ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0) {};   
-  //XXX XXX XXX XXX
   std::map<ref<Expr>, unsigned> bindings;
 
 public:
@@ -146,6 +145,7 @@ public:
     constraints.addConstraint(e); 
   }
 
+  ref<Expr> simplify(ref<Expr> e);
   ref<Expr> simplifier(ref<Expr> e, std::set< std::pair<ref<Expr>,bool> > pairs);
   bool merge(const ExecutionState &b);
   void dumpStack(std::ostream &out) const;

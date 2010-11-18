@@ -14,6 +14,8 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/ExprBuilder.h"
+#include "klee/util/ExprPPrinter.h"
+
 
 #include "klee/Expr.h"
 
@@ -58,7 +60,7 @@ StackFrame::StackFrame(const StackFrame &s)
 }
 
 StackFrame::~StackFrame() { 
-  delete[] locals; 
+  delete[] locals;
 }
 
 /***/
@@ -149,6 +151,13 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
   return os;
 }
 
+ref<Expr> ExecutionState::simplify(ref<Expr> e) {
+  bindings = ExprPPrinter::printSingleExprAndReturnBindings(std::cerr, e);
+
+  std::set<std::pair<ref<Expr>,bool> > empty;
+  
+  return simplifier(e, empty);
+}
 
 ref<Expr> ExecutionState::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,bool> > pairs){
 
@@ -241,6 +250,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     return false;
 
   //quick hack to get user input
+  /*
   int ans;
   std::cout << "type 42 to fail merge\n";
   std::cin >> ans;
@@ -248,7 +258,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     std::cerr << "failing merge..\n";
     return false;
   }
-
+  */
   // XXX
   assert(symbolics==b.symbolics && "Symbolics differ!");
   {
