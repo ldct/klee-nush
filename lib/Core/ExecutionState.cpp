@@ -151,7 +151,8 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
 
 
 ref<Expr> ExecutionState::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,bool> > pairs){
-	if(e->getKind()==Expr::And||e->getKind()==Expr::Or){//if e can be split
+
+	if(e->getKind()==Expr::And||e->getKind()==Expr::Or||e->getKind()==Expr::Eq){//if e can be split
 		ref<Expr> a = e->getKid(0);
 		ref<Expr> b = e->getKid(1);
 
@@ -168,7 +169,12 @@ ref<Expr> ExecutionState::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,b
 
 		bool aInBindings = (bindings.find(a) != bindings.end());
 		bool bInBindings = (bindings.find(b) != bindings.end());
+		bool aChildInBindings = (bindings.find(a->getKid(0)) != bindings.end());
+		bool bChildInBindings = (bindings.find(b->getKid(0)) != bindings.end());
 		std::set< std::pair<ref<Expr>,bool> > pairsp = pairs;
+
+    if(a->getKind()==Expr::Eq) a=simplifier(a,pairsp);//Becareful deletion from pulling
+    if(b->getKind()==Expr::Eq) b=simplifier(b,pairsp);//this too
 
 		if(e->getKind()==Expr::Or && aInBindings) {//make all a in b into false		
 			pairsp.insert(std::make_pair(a,false));
@@ -186,6 +192,22 @@ ref<Expr> ExecutionState::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,b
 			pairsp.insert(std::make_pair(a,true));
 			a=simplifier(a,pairsp);
 		}
+    else if(e->getKind()==Expr::Or && a->getKind()==Expr::Not && aChildInBindings) {//make all a in b into true
+			pairsp.insert(std::make_pair(a,true));
+			b=simplifier(b,pairsp);
+		}
+		else if(e->getKind()==Expr::And && a->getKind()==Expr::Not && aChildInBindings) {//make all a in b into false
+			pairsp.insert(std::make_pair(a,false));
+			b=simplifier(b,pairsp);
+		}
+		else if(e->getKind()==Expr::Or && b->getKind()==Expr::Not && bChildInBindings) {//make all b in a into true	
+			pairsp.insert(std::make_pair(a,true));
+			a=simplifier(a,pairsp);
+		}
+		else if(e->getKind()==Expr::And && b->getKind()==Expr::Not && bChildInBindings) {//make all b in a into false	
+			pairsp.insert(std::make_pair(a,false));
+			a=simplifier(a,pairsp);
+    }
 		else{
 			a=simplifier(a,pairsp);
 			b=simplifier(b,pairsp);
@@ -193,11 +215,20 @@ ref<Expr> ExecutionState::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,b
 	
 		//basic set theory
 		if(e->getKind()==Expr::And && (a==F||b==F)) return F;
-		else if(e->getKind()==Expr::Or && (a==T||b==T)) return T;
-		else if(e->getKind()==Expr::And && a==T) return b;
-		else if(e->getKind()==Expr::And && b==T) return a;
-		else if(e->getKind()==Expr::Or && a==F) return b;
-		else if(e->getKind()==Expr::Or && b==F) return a;
+		if(e->getKind()==Expr::Or && (a==T||b==T)) return T;
+		if(e->getKind()==Expr::And && a==T) return b;
+		if(e->getKind()==Expr::And && b==T) return a;
+		if(e->getKind()==Expr::Or && a==F) return b;
+		if(e->getKind()==Expr::Or && b==F) return a;
+
+    if(e->getKind()==Expr::Eq && a==b) return T;//THESE too and below
+    if(e->getKind()==Expr::Eq && ((a == T && b == F) 
+                                ||(a == F && b == T))) return T;
+
+    if(e->getKind()==Expr::Eq && a==T) return b;
+    if(e->getKind()==Expr::Eq && b==T) return a;
+    if(e->getKind()==Expr::Eq && a==F) return builder->Not(b);
+    if(e->getKind()==Expr::Eq && b==F) return builder->Not(a);
 	}
 	return e;
 }
