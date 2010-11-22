@@ -12,6 +12,8 @@
 
 #include "klee/Expr.h"
 
+#include <map>
+
 // FIXME: Currently we use ConstraintManager for two things: to pass
 // sets of constraints around, and to optimize constraints. We should
 // move the first usage into a separate data structure
@@ -31,9 +33,9 @@ public:
   // create from constraints with no optimization
   explicit
   ConstraintManager(const std::vector< ref<Expr> > &_constraints) :
-    constraints(_constraints) {}
+    constraints(_constraints), bindings() {}
 
-  ConstraintManager(const ConstraintManager &cs) : constraints(cs.constraints) {}
+  ConstraintManager(const ConstraintManager &cs) : constraints(cs.constraints), bindings() {}
 
   typedef std::vector< ref<Expr> >::const_iterator constraint_iterator;
 
@@ -41,6 +43,8 @@ public:
   // simplify the existing constraint set
   void simplifyForValidConstraint(ref<Expr> e);
 
+  void simplify();
+  ref<Expr> simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,bool> > pairs);
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 
   void addConstraint(ref<Expr> e);
@@ -67,6 +71,7 @@ public:
   
 private:
   std::vector< ref<Expr> > constraints;
+  std::map<ref<Expr>, unsigned> bindings;
 
   // returns true iff the constraints were modified
   bool rewriteConstraints(ExprVisitor &visitor);

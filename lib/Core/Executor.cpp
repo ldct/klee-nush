@@ -3261,7 +3261,8 @@ void Executor::getConstraintLog(const ExecutionState &state,
   } else {
     std::ostringstream info;
     ExprPPrinter::printConstraints(info, state.constraints);
-    ExprPPrinter::printSimplifiedConstraints(info, state.constraints);
+    ConstraintManager c = state.constraints;
+    ExprPPrinter::printSimplifiedConstraints(info, c);
     res = info.str();    
   }
 }
