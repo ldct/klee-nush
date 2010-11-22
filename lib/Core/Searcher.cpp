@@ -492,29 +492,20 @@ bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState
 ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &possibleMerges) 
 {
   ExecutionState *target = *possibleMerges.begin();
-  possibleMerges.erase(target);
-
-  std::set<ExecutionState*> allPossibleMerges;
-
-  if (pseudoMergedChildren.find(target) != pseudoMergedChildren.end()) {
-    std::set<ExecutionState*> targetC = pseudoMergedChildren[target];
-    allPossibleMerges.insert(targetC.begin(), targetC.end());
-  }
-
-  pseudoMergedChildren[target].clear();
+  std::set<ExecutionState*> allPossibleMerges; //possibleMerges U {es->childern | es in possibleMerges}
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
     
     allPossibleMerges.insert(es);
 
-    if (pseudoMergedChildren.find(es) != pseudoMergedChildren.end()) {
-      std::set<ExecutionState*> esC = pseudoMergedChildren[es];
-      pseudoMergedChildren[es].clear();
-
+    if (es->hasPseudoMergedChildren()) {
+      std::set<ExecutionState*> esC = es->pseudoMergedChildren;
+      es->pseudoMergedChildren.clear();
       allPossibleMerges.insert(esC.begin(), esC.end());
     }
   }
+  allPossibleMerges.erase(target);
 
   std::cerr << "merging..." << possibleMerges.size() << "\n";
 
@@ -528,7 +519,7 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
     }
     else {
       std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n";
-      pseudoMergedChildren[target].insert(es);
+      target->pseudoMergedChildren.insert(es);
       es->ignoreUpdate = 1;
       
       //TODO: if merge failed because of different instruction pointers, do not pseudomerge.
@@ -584,28 +575,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
 }
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {  
-  
-  /*
-  Everytime a state that has pseudoMergedChildren is called
-  advance each of its children once,
-  then advance it. because if not it might satisfy a block and get merged without its children getting merged.
-  
-  ESs in pseudoMergedChildren kind of just "forward shadow" their parent.
-  */
-  
-  if (selectStateESList.empty()) {
-    ExecutionState* es = &baseSearcher->selectState();
-    if (pseudoMergedChildren.find(es) == pseudoMergedChildren.end()) {
-      return *es;
-    }
-    std::set<ExecutionState*> children = pseudoMergedChildren[es];
-    selectStateESList.insert(selectStateESList.end(), children.begin(), children.end());
-    selectStateESList.push_back(es);
-  }
-  ExecutionState* es = selectStateESList.front();
-  selectStateESList.pop_front();
-  return *es;
-  
+  return baseSearcher->selectState();
 }
 
 void ExhaustiveMergingSearcher::update(ExecutionState *current,

@@ -119,9 +119,11 @@ public:
   std::string getFnAlias(std::string fn);
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
+
+  std::set<ExecutionState*> pseudoMergedChildren;
   
 private:
-  ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0) {};   
+  ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0), pseudoMergedChildren() {};   
   std::map<ref<Expr>, unsigned> bindings;
 
 public:
@@ -134,6 +136,8 @@ public:
   ~ExecutionState();
   
   ExecutionState *branch();
+
+  bool hasPseudoMergedChildren() {return !pseudoMergedChildren.empty();}
 
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
