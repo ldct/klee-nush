@@ -104,6 +104,9 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
 
   ref<Expr> T = builder->True();
   ref<Expr> F = builder->False();
+  
+  std::cerr << "T" << T;
+  std::cerr << "F" << F;
 
   //substitute the SourChicken principle
   if (pairs.end()!=(pairs.find(std::make_pair(e,true)))) {std::cerr<<"\nIm Xuan Ji! True simplifying " << e <<"!!!\n";return T;}
@@ -134,14 +137,6 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
               << "\nbInBindings = " << bInBindings
               << "\ne kind =" << e->getKind() 
               << "\nkthxbai\n";    
-    
-    if(a->getKind()==Expr::Eq) a=simplifier(a,pairsq);
-    if(b->getKind()==Expr::Eq) b=simplifier(b,pairsr);
-    
-		std::cerr << "\n!!!aInBindings = " << aInBindings
-              << "\n!!!bInBindings = " << bInBindings
-              << "\n!!!e kind =" << e->getKind() 
-              << "\n!!!kthxbai\n";    
               
 		if(e->getKind()==Expr::Or && aInBindings) {//make all a in b into false		
 		  std::cerr << "win";
