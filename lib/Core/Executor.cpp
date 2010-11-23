@@ -1077,15 +1077,22 @@ void Executor::stepInstruction(ExecutionState &state) {
     llvm::errs() << *(state.pc->inst);
   }
 
-  if (statsTracker)
+  std::cerr << "in stepinst" << std::endl;
+  if (statsTracker) {
+    std::cerr << "in statstracker" << std::endl;
     statsTracker->stepInstruction(state);
+    std::cerr << "out statstracker" << std::endl;
+  }
 
+
+  std::cerr << "here" << std::endl;
   ++stats::instructions;
   state.prevPC = state.pc;
   ++state.pc;
 
   if (stats::instructions==StopAfterNInstructions)
     haltExecution = true;
+  std::cerr << "out of stepinst" << std::endl;
 }
 
 void Executor::executeCall(ExecutionState &state, 
@@ -2418,6 +2425,19 @@ void Executor::run(ExecutionState &initialState) {
   while (!states.empty() && !searcher->empty() && !haltExecution) {
     
     ExecutionState &state = searcher->selectState();
+    std::set<ExecutionState*> children = state.pseudoMergedChildren;
+
+    for (std::set<ExecutionState*>::iterator ei = children.begin(), ee = children.end(); ei != ee; ei++) {
+      ExecutionState *es = *ei;
+      KInstruction *ki = es->pc;
+      stepInstruction(*es);
+
+      executeInstruction(*es, ki);
+      processTimers(es, MaxInstructionTime);
+      //updateStates(es);
+    }
+
+
     KInstruction *ki = state.pc;
     stepInstruction(state);
 
@@ -2428,20 +2448,6 @@ void Executor::run(ExecutionState &initialState) {
       doMaxMemory();      
 
     updateStates(&state);
-    
-    std::set<ExecutionState*> children = state.pseudoMergedChildren;
-    
-    for (std::set<ExecutionState*>::iterator ei = children.begin(), ee = children.end(); ei != ee; ei++) {
-      
-      ExecutionState *es = *ei;
-      KInstruction *ki = es->pc;
-      stepInstruction(*es);
-      
-      executeInstruction(*es, ki);
-      processTimers(es, MaxInstructionTime);
-      
-    }
-    
   }
 
   delete searcher;

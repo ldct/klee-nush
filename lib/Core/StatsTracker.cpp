@@ -236,6 +236,7 @@ void StatsTracker::done() {
 }
 
 void StatsTracker::stepInstruction(ExecutionState &es) {
+  std::cerr << "in stsi" << std::endl;
   if (OutputIStats) {
     if (TrackInstructionTime) {
       static sys::TimeValue lastNowTime(0,0),lastUserTime(0,0);
@@ -254,11 +255,18 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
         lastNowTime = now;
       }
     }
+    std::cerr << "phew" << std::endl;
 
     Instruction *inst = es.pc->inst;
+
+    std::cerr << "got es.pc->inst" << std::endl;
+
     const InstructionInfo &ii = *es.pc->info;
     StackFrame &sf = es.stack.back();
     theStatisticManager->setIndex(ii.id);
+
+    std::cerr << "lol" << std::endl;
+
     if (UseCallPaths)
       theStatisticManager->setContext(&sf.callPathNode->statistics);
 

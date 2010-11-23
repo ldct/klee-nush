@@ -10,6 +10,8 @@
 #ifndef KLEE_KINSTITERATOR_H
 #define KLEE_KINSTITERATOR_H
 
+#include <iostream>
+
 namespace klee {
   struct KInstruction;
 
@@ -39,7 +41,10 @@ namespace klee {
       return *this;
     }
 
-    operator KInstruction*() const { return it ? *it : 0;}
+    operator KInstruction*() const { 
+      std::cerr << it << std::endl;
+      return it ? *it : 0;
+    }
     operator bool() const { return it != 0; }
 
     KInstruction *operator ->() const { return *it; }

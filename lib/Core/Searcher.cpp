@@ -515,13 +515,14 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
     bool mergeOK = target->merge(*es);
     if (mergeOK) {
       std::cerr << "merge ok! \n";
-      executor.terminateState(*es);
+      //executor.terminateState(*es);
     }
     else {
-      std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n";
+      std::cerr << "warning, merge failed; will now pseudomerge into" << target << std::endl 
+                << "size1 " << target->pseudoMergedChildren.size() << std::endl;
       target->pseudoMergedChildren.insert(es);
-      es->ignoreUpdate = 1;
-      
+      std::cerr << "size2 " << target->pseudoMergedChildren.size() << std::endl; 
+       
       //TODO: if merge failed because of different instruction pointers, do not pseudomerge.
       //pseudomerges should only be used if the two path constraints / memory differ wildly, 
       //and not for different instruction pointers.
@@ -560,7 +561,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
  
     if (allOK) {
       ExecutionState* target = doMerge(possibleMerges);
-
+      std::cerr << "doMerge ok" << std::endl;
       //empty pausedStates
       //TODO: some assumptions here?
       for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
@@ -572,6 +573,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
       baseSearcher->addState(target);
     }
   }
+  std::cerr << "cleaned" << std::endl;
 }
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {  
@@ -585,11 +587,6 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
   baseSearcher->update(current, addedStates, removedStates);
 
   if (!current) { 
-    return;
-  }
-
-  if (current->ignoreUpdate) {
-    std::cerr << "ignoring an update...\n";
     return;
   }
 
@@ -608,6 +605,7 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
     }
   }
   cleanPausedStates();
+  std::cerr << "finished update" << std::endl;
 }
 
 ///

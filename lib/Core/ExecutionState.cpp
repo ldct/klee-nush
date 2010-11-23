@@ -159,7 +159,6 @@ bool ExecutionState::merge(const ExecutionState &b) {
     return false;
 
   //quick hack to get user input
-  /*
   int ans;
   std::cout << "type 42 to fail merge\n";
   std::cin >> ans;
@@ -167,7 +166,11 @@ bool ExecutionState::merge(const ExecutionState &b) {
     std::cerr << "failing merge..\n";
     return false;
   }
-  */
+  else {
+    std::cerr << "ok, ill try to merge..\n";
+  }
+  
+
   // XXX
   assert(symbolics==b.symbolics && "Symbolics differ!");
   {
