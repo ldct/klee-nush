@@ -508,7 +508,7 @@ void ExprPPrinter::printSimplifiedConstraints(std::ostream &os,
 					      ConstraintManager &constraints) {
   os << "simplified: \n";
   
-  constraints.simplify();
+  constraints.doSimplifyConstraints();
   printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 					   

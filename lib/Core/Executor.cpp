@@ -2424,44 +2424,24 @@ void Executor::run(ExecutionState &initialState) {
     executeInstruction(state, ki);
     processTimers(&state, MaxInstructionTime);
 
-    if (MaxMemory) {
-      if ((stats::instructions & 0xFFFF) == 0) {
-        // We need to avoid calling GetMallocUsage() often because it
-        // is O(elts on freelist). This is really bad since we start
-        // to pummel the freelist once we hit the memory cap.
-        unsigned mbs = sys::Process::GetTotalMemoryUsage() >> 20;
-        
-        if (mbs > MaxMemory) {
-          if (mbs > MaxMemory + 100) {
-            // just guess at how many to kill
-            unsigned numStates = states.size();
-            unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
-
-            if (MaxMemoryInhibit)
-              klee_warning("killing %d states (over memory cap)",
-                           toKill);
-
-            std::vector<ExecutionState*> arr(states.begin(), states.end());
-            for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
-              unsigned idx = rand() % N;
-
-              // Make two pulls to try and not hit a state that
-              // covered new code.
-              if (arr[idx]->coveredNew)
-                idx = rand() % N;
-
-              std::swap(arr[idx], arr[N-1]);
-              terminateStateEarly(*arr[N-1], "memory limit");
-            }
-          }
-          atMemoryLimit = true;
-        } else {
-          atMemoryLimit = false;
-        }
-      }
-    }
+    if (MaxMemory && ((stats::instructions & 0xFFFF) == 0))
+      doMaxMemory();      
 
     updateStates(&state);
+    
+    std::set<ExecutionState*> children = state.pseudoMergedChildren;
+    
+    for (std::set<ExecutionState*>::iterator ei = children.begin(), ee = children.end(); ei != ee; ei++) {
+      
+      ExecutionState *es = *ei;
+      KInstruction *ki = es->pc;
+      stepInstruction(*es);
+      
+      executeInstruction(*es, ki);
+      processTimers(es, MaxInstructionTime);
+      
+    }
+    
   }
 
   delete searcher;
@@ -2478,6 +2458,41 @@ void Executor::run(ExecutionState &initialState) {
       terminateStateEarly(state, "execution halting");
     }
     updateStates(0);
+  }
+}
+
+void Executor::doMaxMemory() {
+  // We need to avoid calling GetMallocUsage() often because it
+  // is O(elts on freelist). This is really bad since we start
+  // to pummel the freelist once we hit the memory cap.
+  unsigned mbs = sys::Process::GetTotalMemoryUsage() >> 20;
+  
+  if (mbs > MaxMemory) {
+    if (mbs > MaxMemory + 100) {
+      // just guess at how many to kill
+      unsigned numStates = states.size();
+      unsigned toKill = std::max(1U, numStates - numStates*MaxMemory/mbs);
+
+      if (MaxMemoryInhibit)
+        klee_warning("killing %d states (over memory cap)",
+                     toKill);
+
+      std::vector<ExecutionState*> arr(states.begin(), states.end());
+      for (unsigned i=0,N=arr.size(); N && i<toKill; ++i,--N) {
+        unsigned idx = rand() % N;
+
+        // Make two pulls to try and not hit a state that
+        // covered new code.
+        if (arr[idx]->coveredNew)
+          idx = rand() % N;
+
+        std::swap(arr[idx], arr[N-1]);
+        terminateStateEarly(*arr[N-1], "memory limit");
+      }
+    }
+    atMemoryLimit = true;
+  } else {
+    atMemoryLimit = false;
   }
 }
 

@@ -43,7 +43,8 @@ public:
   // simplify the existing constraint set
   void simplifyForValidConstraint(ref<Expr> e);
 
-  void simplify();
+  void doSimplifyConstraints();
+  ref<Expr> simplify(ref<Expr> e);
   ref<Expr> simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,bool> > pairs);
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 

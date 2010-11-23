@@ -178,6 +178,8 @@ private:
   void printFileLine(ExecutionState &state, KInstruction *ki);
 
   void run(ExecutionState &initialState);
+  
+  void doMaxMemory();
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
