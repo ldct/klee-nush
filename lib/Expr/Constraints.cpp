@@ -105,7 +105,6 @@ ref<Expr> ConstraintManager::simplify(ref<Expr> e) {
 }
 
 ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,bool> > pairs){
-
   klee::ExprBuilder *builder = createDefaultExprBuilder();
 
   ref<Expr> T = builder->True();
@@ -129,12 +128,15 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
 		bool aInBindings = (bindings.find(a) != bindings.end());
 		bool bInBindings = (bindings.find(b) != bindings.end());
 		
-		bool aChildInBindings = (a->getKind() == Expr::Not) ? (bindings.find(a->getKid(0)) != bindings.end()) : false;
-		bool bChildInBindings = (a->getKind() == Expr::Not) ? (bindings.find(b->getKid(0)) != bindings.end()) : false;
-    
+		//bool aChildInBindings = (a->getKind() == Expr::Not) ? (bindings.find(a->getKid(0)) != bindings.end()) : false;
+		//bool bChildInBindings = (b->getKind() == Expr::Not) ? (bindings.find(b->getKid(0)) != bindings.end()) : false;
+		
+		bool aChildInBindings = (a->getKind() == Expr::Eq && a->getKid(0)==F) ? (bindings.find(a->getKid(1)) != bindings.end()) : false;
+		bool bChildInBindings = (b->getKind() == Expr::Eq && b->getKid(0)==F) ? (bindings.find(b->getKid(1)) != bindings.end()) : false;
+
     std::set< std::pair<ref<Expr>,bool> > pairsp = pairs;
-    std::set< std::pair<ref<Expr>,bool> > pairsq = pairs;
-    std::set< std::pair<ref<Expr>,bool> > pairsr = pairs;
+    //std::set< std::pair<ref<Expr>,bool> > pairsq = pairs;
+    //std::set< std::pair<ref<Expr>,bool> > pairsr = pairs;
     
     /*
     std::cerr << "\naInBindings = " << aInBindings
@@ -159,19 +161,19 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
 			a=simplifier(a,pairsp);
 		}
     else if(e->getKind()==Expr::Or && aChildInBindings) {//make all a in b into true
-			pairsp.insert(std::make_pair(a,true));
+			pairsp.insert(std::make_pair(a->getKid(1),true));
 			b=simplifier(b,pairsp);
 		}
 		else if(e->getKind()==Expr::And && aChildInBindings) {//make all a in b into false
-			pairsp.insert(std::make_pair(a,false));
+			pairsp.insert(std::make_pair(a->getKid(1),false));
 			b=simplifier(b,pairsp);
 		}
 		else if(e->getKind()==Expr::Or && bChildInBindings) {//make all b in a into true	
-			pairsp.insert(std::make_pair(b,true));
+			pairsp.insert(std::make_pair(b->getKid(1),true));
 			a=simplifier(a,pairsp);
 		}
 		else if(e->getKind()==Expr::And && bChildInBindings) {//make all b in a into false	
-			pairsp.insert(std::make_pair(b,false));
+			pairsp.insert(std::make_pair(b->getKid(1),false));
 			a=simplifier(a,pairsp);
     }
 		else{
@@ -193,8 +195,8 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
 
     if(e->getKind()==Expr::Eq && a==T) return b;
     if(e->getKind()==Expr::Eq && b==T) return a;
-    if(e->getKind()==Expr::Eq && a==F) return builder->Not(b);
-    if(e->getKind()==Expr::Eq && b==F) return builder->Not(a);
+    //if(e->getKind()==Expr::Eq && a==F) return builder->Not(b);
+    //if(e->getKind()==Expr::Eq && b==F) return builder->Not(a);
     
     if(e->getKind()==Expr::And) return builder->And(a,b);
     if(e->getKind()==Expr::Or) return builder->Or(a,b);
