@@ -1077,22 +1077,16 @@ void Executor::stepInstruction(ExecutionState &state) {
     llvm::errs() << *(state.pc->inst);
   }
 
-  std::cerr << "in stepinst" << std::endl;
   if (statsTracker) {
-    std::cerr << "in statstracker" << std::endl;
     statsTracker->stepInstruction(state);
-    std::cerr << "out statstracker" << std::endl;
   }
 
-
-  std::cerr << "here" << std::endl;
   ++stats::instructions;
   state.prevPC = state.pc;
   ++state.pc;
 
   if (stats::instructions==StopAfterNInstructions)
     haltExecution = true;
-  std::cerr << "out of stepinst" << std::endl;
 }
 
 void Executor::executeCall(ExecutionState &state, 

@@ -42,7 +42,6 @@ namespace klee {
     }
 
     operator KInstruction*() const { 
-      std::cerr << it << std::endl;
       return it ? *it : 0;
     }
     operator bool() const { return it != 0; }
