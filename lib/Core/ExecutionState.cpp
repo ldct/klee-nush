@@ -77,7 +77,8 @@ ExecutionState::ExecutionState(KFunction *kf)
     coveredNew(false),
     forkDisabled(false),
     ignoreUpdate(0),
-    ptreeNode(0) {
+    ptreeNode(0),
+    pseudoMergedChildren() {
   pushFrame(0, kf);
 }
 
@@ -87,7 +88,8 @@ ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     constraints(assumptions),
     queryCost(0.),
     ignoreUpdate(0),
-    ptreeNode(0) {
+    ptreeNode(0),
+    pseudoMergedChildren() {
 }
 
 ExecutionState::~ExecutionState() {

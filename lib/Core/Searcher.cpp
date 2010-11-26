@@ -494,29 +494,40 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
   ExecutionState *target = *possibleMerges.begin();
   std::set<ExecutionState*> allPossibleMerges; //possibleMerges U {es->childern | es in possibleMerges}
 
+  std::cerr << "merging... possibleMerges = \n";
+
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
-    
+    std::cerr << es ;
+
     allPossibleMerges.insert(es);
 
     if (es->hasPseudoMergedChildren()) {
       std::set<ExecutionState*> esC = es->pseudoMergedChildren;
       es->pseudoMergedChildren.clear();
       allPossibleMerges.insert(esC.begin(), esC.end());
+      std::cerr << ":";
+      for (std::set<ExecutionState*>::iterator esCi = esC.begin(), esCe = esC.end(); esCi != esCe; ++esCi) {
+        ExecutionState* esCes = *esCi;
+        std::cerr << esCes << " ";
+      }
     }
+    std::cerr << "\n";
   }
-  allPossibleMerges.erase(target);
+  std::cerr << "\n";
 
-  std::cerr << "merging..." << possibleMerges.size() << "\n";
 
   for (std::set<ExecutionState*>::iterator ei = allPossibleMerges.begin(), ee = allPossibleMerges.end(); ei != ee; ++ei) {
+    if (ei == allPossibleMerges.begin())
+      continue;
     ExecutionState *es = *ei;
+    std::cerr << es << "\n";
 
     bool mergeOK = target->merge(*es);
     if (mergeOK) {
       std::cerr << "merge ok! \n";
-//      std::cerr << "terminate " << es << "\n";
-      //executor.terminateState(*es);
+      std::cerr << "terminate " << es << "\n";
+      executor.terminateState(*es);
     }
     else {
       std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n"; 
@@ -526,6 +537,7 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
       //pseudomerges should only be used if the two path constraints / memory differ wildly, 
       //and not for different instruction pointers.
     }
+    baseSearcher->removeState(es);
   }
   return target;
   //only target will be added back from baseSearcher. the pseudoMergedChildren won't.
