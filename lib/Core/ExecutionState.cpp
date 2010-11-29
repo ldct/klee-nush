@@ -80,6 +80,7 @@ ExecutionState::ExecutionState(KFunction *kf)
     ptreeNode(0),
     pseudoMergedChildren() {
   pushFrame(0, kf);
+  std::cerr << "ES " << this <<  " created\n";
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions) 
@@ -89,8 +90,7 @@ ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     queryCost(0.),
     ignoreUpdate(0),
     ptreeNode(0),
-    pseudoMergedChildren() {
-}
+    pseudoMergedChildren() {}
 
 ExecutionState::~ExecutionState() {
   while (!stack.empty()) popFrame();
@@ -105,6 +105,11 @@ ExecutionState *ExecutionState::branch() {
 
   weight *= .5;
   falseState->weight -= weight;
+
+  // I don't know how to clear this in constructor...
+  std::cerr << "ES " << falseState 
+            << " created by branching from " << this 
+            << "\n"; 
 
   return falseState;
 }

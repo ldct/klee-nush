@@ -880,6 +880,24 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
+
+    //change here
+    std::set<ExecutionState*> currentPseudoMergedChildren = current.pseudoMergedChildren;
+    trueState->pseudoMergedChildren.clear();
+    falseState->pseudoMergedChildren.clear();
+
+    for (std::set<ExecutionState*>::iterator it = currentPseudoMergedChildren.begin(), ie = currentPseudoMergedChildren.end(); it != ie; ++it) {
+      ExecutionState *trueChild = *it;
+      ExecutionState *falseChild = trueChild->branch();
+
+      addConstraint(*trueChild, condition);
+      addConstraint(*falseChild, Expr::createIsZero(condition));
+
+      trueState->pseudoMergedChildren.insert(trueChild);
+      falseState->pseudoMergedChildren.insert(falseChild);
+    }
+
+
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
 
