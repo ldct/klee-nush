@@ -3165,6 +3165,31 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 
 /***/
 
+std::map<BasicBlock*, int> dfsNumber;
+
+void doDFS(llvm::Function* root) {
+}
+
+void DFS(llvm::Function* f, int depth) {
+  return;
+}
+
+void Executor::generateWaitset(llvm::Module* M) {
+  	std::cerr << "\ngenerateWaitset called on module!\n";
+  	
+  for (Module::iterator f = M->begin(), fe = M->end(); f != fe; ++f) {
+    if (!f->isIntrinsic() && f->getNameStr() != "klee_make_symbolic") {
+      BasicBlock& bb = f->getEntryBlock();  
+      std::cerr << "function! " << f->getNameStr() << "entry bb: " << bb.getNameStr() << "\n";      
+    }
+  }
+
+  std::cerr << "\n";
+  return;
+}
+
+/***/
+
 void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,

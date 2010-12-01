@@ -40,7 +40,7 @@ public:
 
   virtual void processTestCase(const ExecutionState &state,
                                const char *err, 
-                               const char *suffix) = 0;
+                               const char *suffix) = 0;                           
 };
 
 class Interpreter {
@@ -112,6 +112,9 @@ public:
   // supply a set of symbolic bindings that will be used as "seeds"
   // for the search. use null to reset.
   virtual void useSeeds(const std::vector<struct KTest *> *seeds) = 0;
+
+  // TODO: remove this ugly hack
+  virtual void generateWaitset(llvm::Module* M) = 0;
 
   virtual void runFunctionAsMain(llvm::Function *f,
                                  int argc,

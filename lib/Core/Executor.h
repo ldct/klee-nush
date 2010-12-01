@@ -25,6 +25,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <iostream>
 
 struct KTest;
 
@@ -139,6 +140,9 @@ private:
   /// The set of legal function addresses, used to validate function
   /// pointers. We use the actual Function* address as the function address.
   std::set<uint64_t> legalFunctions;
+  
+  // The waitset of basicblocks
+  std::map<llvm::BasicBlock*, std::set<llvm::BasicBlock*> > waitset;
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
@@ -384,6 +388,12 @@ private:
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
+                     
+  std::set<llvm::BasicBlock*> getWaitset(llvm::BasicBlock* bb) {
+  	return waitset[bb];
+  }
+  
+  void generateWaitset(llvm::Module* M);
                 
 public:
   Executor(const InterpreterOptions &opts, InterpreterHandler *ie);
