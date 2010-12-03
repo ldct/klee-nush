@@ -94,6 +94,11 @@ public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
 
 private:
+
+  typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
+  typedef std::map<BBLink, ExecutionState*> BBLinkMapES;
+  typedef std::map<ExecutionState*, std::set<ExecutionState*> > ESMapESSet;
+
   class TimerInfo;
 
   KModule *kmodule;
@@ -141,9 +146,6 @@ private:
   /// pointers. We use the actual Function* address as the function address.
   std::set<uint64_t> legalFunctions;
   
-  // The waitset of basicblocks
-  std::map<llvm::BasicBlock*, std::set<llvm::BasicBlock*> > waitset;
-
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
   const struct KTest *replayOut;
@@ -173,7 +175,7 @@ private:
   bool ivcEnabled;
 
   /// The maximum time to allow for a single stp query.
-  double stpTimeout;  
+  double stpTimeout;
 
   llvm::Function* getCalledFunction(llvm::CallSite &cs, ExecutionState &state);
   
@@ -389,10 +391,13 @@ private:
   void processTimers(ExecutionState *current,
                      double maxInstTime);
                      
-  std::set<llvm::BasicBlock*> getWaitset(llvm::BasicBlock* bb) {
-  	return waitset[bb];
-  }
+  // The waitset of basicblocks
+  std::map<llvm::BasicBlock*, std::set<llvm::BasicBlock*> > BBWaitset;
   
+  // The waitset of BBLinks
+  std::map<llvm::BasicBlock*, std::set<BBLink> > BBLinkWaitset;
+  
+  void fnWaitset(llvm::Function* F);
   void generateWaitset(llvm::Module* M);
                 
 public:

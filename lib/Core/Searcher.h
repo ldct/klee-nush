@@ -213,27 +213,6 @@ namespace klee {
     }
   };
 
-
-  /*
-  Unidirectional Tree
-  Similar to set and multimap
-  
-  r --> a --> b
-          --> c
-    --> d --> e
-  
-  used to replace pseudoMergedChildren with cleaner syntax and possibility of more functions
-  
-  
-  template<class T>
-  class UDTRee {
-    
-    std::set<T> allNodes;
-    std::multimap<T,T> 
-    
-  }
-  */
-
   class ExhaustiveMergingSearcher : public Searcher {
 
     typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;

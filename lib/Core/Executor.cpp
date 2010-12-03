@@ -3165,13 +3165,31 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 
 /***/
 
-std::map<BasicBlock*, int> dfsNumber;
+std::map<BasicBlock*, int> depth;
 
-void doDFS(llvm::Function* root) {
+void DFS(llvm::BasicBlock* bb, int d) {
+  std::cout << "DFS(" << bb->getNameStr() << "," << d << ")\n";
+  if (depth.find(bb) != depth.end() && depth[bb] < d) {
+    return;
+  }
+  depth[bb] = d;
+  for (succ_iterator si = succ_begin(bb), se = succ_end(bb); si != se; ++si) {
+    llvm::BasicBlock *bs = *si;
+    DFS(*si, d+1);
+  }
+  return;
 }
 
-void DFS(llvm::Function* f, int depth) {
-  return;
+void Executor::fnWaitset(llvm::Function* F) {
+
+  for (llvm::Function::iterator i = F->begin(), e = F->end(); i != e; ++i) {
+    llvm::BasicBlock *bb = i;
+    for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
+      BasicBlock *pred = *pi;
+      BBLink link = std::make_pair(pred, bb);
+      BBLinkWaitset[bb].insert(link);
+    }
+  }
 }
 
 void Executor::generateWaitset(llvm::Module* M) {
@@ -3179,8 +3197,12 @@ void Executor::generateWaitset(llvm::Module* M) {
   	
   for (Module::iterator f = M->begin(), fe = M->end(); f != fe; ++f) {
     if (!f->isIntrinsic() && f->getNameStr() != "klee_make_symbolic") {
-      BasicBlock& bb = f->getEntryBlock();  
-      std::cerr << "function! " << f->getNameStr() << "entry bb: " << bb.getNameStr() << "\n";      
+      BasicBlock& root = f->getEntryBlock();  
+      DFS(&root, 0);
+      for (std::map<BasicBlock*, int>::iterator mi = depth.begin(), me = depth.end(); mi != me; mi++) {
+        std::cout << mi->first->getNameStr() << " : " << mi->second << "\n";
+      }
+      fnWaitset(f);
     }
   }
 
