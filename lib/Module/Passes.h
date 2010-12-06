@@ -25,6 +25,7 @@ namespace llvm {
   class Module;
   class TargetData;
   class Type;
+  class AnalysisUsage;
 }
 
 namespace klee {
@@ -81,7 +82,7 @@ public:
   virtual bool runOnModule(llvm::Module &M);
 };
 
-class getRegionInfoPass : public llvm::ModulePass {
+class getRegionInfoPass : public llvm::FunctionPass {
   static char ID;
   klee::Interpreter *interpreter;
 
@@ -89,13 +90,14 @@ class getRegionInfoPass : public llvm::ModulePass {
 public:
   getRegionInfoPass(klee::Interpreter *_interpreter)
 #if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
-    : llvm::ModulePass((intptr_t) &ID),
+    : llvm::FunctionPass((intptr_t) &ID),
 #else
-    : llvm::ModulePass(ID),
+    : llvm::FunctionPass(ID),
 #endif
       interpreter(_interpreter) {}
   
-  virtual bool runOnModule(llvm::Module &M);
+  virtual bool runOnFunction(llvm::Function &F);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 };
 
 //llvm::Interpreter* _interpreter

@@ -22,10 +22,13 @@
 #endif
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Type.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Target/TargetData.h"
+
+#include <iostream>
 
 using namespace llvm;
 
@@ -33,8 +36,21 @@ namespace klee {
 
 char getRegionInfoPass::ID;
 
-bool getRegionInfoPass::runOnModule(Module &M) {
-  interpreter->setWaitset();
+void getRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequiredTransitive<RegionInfo>();
+
+}
+
+bool getRegionInfoPass::runOnFunction(llvm::Function &F) {
+  std::cerr << F.getNameStr();
+  RegionInfo* RI = &getAnalysis<RegionInfo>();
+  
+  for (Function::iterator i = F.begin(), e = F.end(); i != e; ++i) {
+    std::cerr << i->getNameStr() << " " << RI->getRegionFor(i) << RI->getRegionFor(i)->getParent() << "\n";
+  }
+  
   return 1;
 }
+
 }
