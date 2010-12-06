@@ -21,6 +21,9 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 #include "llvm/Support/CallSite.h"
+#include "llvm/Analysis/RegionInfo.h"
+#include "llvm/PassManagers.h"
+#include "llvm/Pass.h"
 #include <vector>
 #include <string>
 #include <map>
@@ -41,6 +44,11 @@ namespace llvm {
   class TargetData;
   class Twine;
   class Value;
+  class FunctionPass;
+  class RegionInfo;
+  
+  FunctionPass *createRegionInfoPass();
+  
 }
 
 namespace klee {  
@@ -436,6 +444,8 @@ public:
   virtual void useSeeds(const std::vector<struct KTest *> *seeds) { 
     usingSeeds = seeds;
   }
+  
+  void setWaitset();
 
   virtual void runFunctionAsMain(llvm::Function *f,
                                  int argc,

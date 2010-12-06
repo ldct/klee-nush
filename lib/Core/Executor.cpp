@@ -60,6 +60,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/System/Process.h"
 #include "llvm/Target/TargetData.h"
+#include "llvm/PassManager.h"
 
 #include <cassert>
 #include <algorithm>
@@ -333,7 +334,7 @@ const Module *Executor::setModule(llvm::Module *module,
                                   const ModuleOptions &opts) {
   assert(!kmodule && module && "can only register one module"); // XXX gross
   
-  kmodule = new KModule(module);
+  kmodule = new KModule(module,this);
 
   // Initialize the context.
   TargetData *TD = kmodule->targetData;
@@ -3174,7 +3175,6 @@ void DFS(llvm::BasicBlock* bb, int d) {
   }
   depth[bb] = d;
   for (succ_iterator si = succ_begin(bb), se = succ_end(bb); si != se; ++si) {
-    llvm::BasicBlock *bs = *si;
     DFS(*si, d+1);
   }
   return;
@@ -3186,27 +3186,27 @@ void Executor::fnWaitset(llvm::Function* F) {
     llvm::BasicBlock *bb = i;
     for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
       BasicBlock *pred = *pi;
+      if (depth[pred] > depth[bb])
+        continue;
       BBLink link = std::make_pair(pred, bb);
       BBLinkWaitset[bb].insert(link);
     }
   }
 }
 
+void Executor::setWaitset() {
+  std::cerr << "hello LOL\n";
+}
+
 void Executor::generateWaitset(llvm::Module* M) {
-  	std::cerr << "\ngenerateWaitset called on module!\n";
-  	
+  std::cerr << "\ngenerateWaitset called on module!\n";
   for (Module::iterator f = M->begin(), fe = M->end(); f != fe; ++f) {
     if (!f->isIntrinsic() && f->getNameStr() != "klee_make_symbolic") {
-      BasicBlock& root = f->getEntryBlock();  
-      DFS(&root, 0);
-      for (std::map<BasicBlock*, int>::iterator mi = depth.begin(), me = depth.end(); mi != me; mi++) {
-        std::cout << mi->first->getNameStr() << " : " << mi->second << "\n";
-      }
-      fnWaitset(f);
+      llvm::RegionInfo *RI = cast<RegionInfo>(llvm::createRegionInfoPass());
+  
     }
   }
-
-  std::cerr << "\n";
+ std::cerr << "\n";
   return;
 }
 

@@ -115,6 +115,8 @@ public:
 
   // TODO: remove this ugly hack
   virtual void generateWaitset(llvm::Module* M) = 0;
+  
+  virtual void setWaitset() = 0;
 
   virtual void runFunctionAsMain(llvm::Function *f,
                                  int argc,

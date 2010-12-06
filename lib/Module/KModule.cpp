@@ -83,9 +83,10 @@ namespace {
                               cl::desc("Print functions whose address is taken."));
 }
 
-KModule::KModule(Module *_module) 
+KModule::KModule(Module *_module, Interpreter *_interpreter) 
   : module(_module),
     targetData(new TargetData(module)),
+    interpreter(_interpreter),
     dbgStopPointFn(0),
     kleeMergeFn(0),
     infos(0),
@@ -200,6 +201,7 @@ static void forceImport(Module *m, const char *name, const Type *retType, ...) {
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
+  interpreter->setWaitset();
   if (!MergeAtExit.empty()) {
     Function *mergeFn = module->getFunction("klee_merge");
     if (!mergeFn) {
@@ -259,6 +261,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // deleted (via RAUW). This can be removed once LLVM fixes this
   // issue.
   pm.add(new IntrinsicCleanerPass(*targetData, false));
+  pm.add(new getRegionInfoPass(interpreter));
   pm.run(*module);
 
   if (opts.Optimize)

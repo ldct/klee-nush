@@ -82,6 +82,8 @@ namespace klee {
     llvm::Module *module;
     llvm::TargetData *targetData;
     
+    klee::Interpreter *interpreter;
+    
     // Some useful functions to know the address of
     llvm::Function *dbgStopPointFn, *kleeMergeFn;
 
@@ -102,7 +104,7 @@ namespace klee {
     Cell *constantTable;
 
   public:
-    KModule(llvm::Module *_module);
+    KModule(llvm::Module *_module, klee::Interpreter *_interpreter);
     ~KModule();
 
     /// Initialize local data structures.

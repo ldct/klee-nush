@@ -11,6 +11,7 @@
 #define KLEE_PASSES_H
 
 #include "klee/Config/config.h"
+#include "klee/Interpreter.h"
 
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
@@ -79,6 +80,25 @@ public:
   
   virtual bool runOnModule(llvm::Module &M);
 };
+
+class getRegionInfoPass : public llvm::ModulePass {
+  static char ID;
+  klee::Interpreter *interpreter;
+
+  bool runOnBasicBlock(llvm::BasicBlock &b);
+public:
+  getRegionInfoPass(klee::Interpreter *_interpreter)
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+    : llvm::ModulePass((intptr_t) &ID),
+#else
+    : llvm::ModulePass(ID),
+#endif
+      interpreter(_interpreter) {}
+  
+  virtual bool runOnModule(llvm::Module &M);
+};
+
+//llvm::Interpreter* _interpreter
   
   // performs two transformations which make interpretation
   // easier and faster.
