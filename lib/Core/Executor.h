@@ -28,6 +28,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <utility>
 #include <iostream>
 
 struct KTest;
@@ -106,6 +107,12 @@ private:
   typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
   typedef std::map<BBLink, ExecutionState*> BBLinkMapES;
   typedef std::map<ExecutionState*, std::set<ExecutionState*> > ESMapESSet;
+  typedef std::map<llvm::BasicBlock*, std::set<int> > BBMapRegionSet;
+  typedef std::pair<llvm::Function*, int> regionID;
+  typedef std::map<regionID, std::set<llvm::BasicBlock*> > IDMapBBSet;
+
+  BBMapRegionSet regionsOfBB;
+  IDMapBBSet BBsOfRegion;
 
   class TimerInfo;
 
@@ -445,7 +452,7 @@ public:
     usingSeeds = seeds;
   }
   
-  void setWaitset();
+  void setRegion(llvm::Function* F, llvm::BasicBlock* BB, int i);
 
   virtual void runFunctionAsMain(llvm::Function *f,
                                  int argc,

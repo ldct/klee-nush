@@ -29,6 +29,7 @@
 #include "llvm/Target/TargetData.h"
 
 #include <iostream>
+#include <map>
 
 using namespace llvm;
 
@@ -43,11 +44,23 @@ void getRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool getRegionInfoPass::runOnFunction(llvm::Function &F) {
-  std::cerr << F.getNameStr();
+  std::cerr << F.getNameStr() << "\n";
   RegionInfo* RI = &getAnalysis<RegionInfo>();
   
+  Region* Top = RI->getTopLevelRegion();
+
+  std::map<Region*, int> regionID;
+  int count = 0;
+  
   for (Function::iterator i = F.begin(), e = F.end(); i != e; ++i) {
-    std::cerr << i->getNameStr() << " " << RI->getRegionFor(i) << RI->getRegionFor(i)->getParent() << "\n";
+    Region* R = RI->getRegionFor(i);
+    while (R != Top) {
+      if (regionID.find(R) == regionID.end()) {
+        regionID[R] = count++;
+      }
+      interpreter->setRegion(&F, i, regionID[R]);
+      R = R->getParent();
+    }
   }
   
   return 1;

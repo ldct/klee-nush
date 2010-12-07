@@ -201,7 +201,6 @@ static void forceImport(Module *m, const char *name, const Type *retType, ...) {
 
 void KModule::prepare(const Interpreter::ModuleOptions &opts,
                       InterpreterHandler *ih) {
-  interpreter->setWaitset();
   if (!MergeAtExit.empty()) {
     Function *mergeFn = module->getFunction("klee_merge");
     if (!mergeFn) {

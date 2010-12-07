@@ -312,6 +312,7 @@ Executor::Executor(const InterpreterOptions &opts,
     atMemoryLimit(false),
     inhibitForking(false),
     haltExecution(false),
+    regionsOfBB(),
     ivcEnabled(false),
     stpTimeout(MaxSTPTime != 0 && MaxInstructionTime != 0
       ? std::min(MaxSTPTime,MaxInstructionTime)
@@ -3194,11 +3195,14 @@ void Executor::fnWaitset(llvm::Function* F) {
   }
 }
 
-void Executor::setWaitset() {
-  std::cerr << "hello LOL\n";
+void Executor::setRegion(llvm::Function* F, llvm::BasicBlock* BB, int i) {
+  regionsOfBB[BB].insert(i);
+  BBsOfRegion[std::make_pair(F,i)].insert(BB);
+  std::cerr << BB->getNameStr() << "->" << i  << " " << regionsOfBB[BB].size() << "\n";
 }
 
 void Executor::generateWaitset(llvm::Module* M) {
+  /*
   std::cerr << "\ngenerateWaitset called on module!\n";
   for (Module::iterator f = M->begin(), fe = M->end(); f != fe; ++f) {
     if (!f->isIntrinsic() && f->getNameStr() != "klee_make_symbolic") {
@@ -3208,6 +3212,7 @@ void Executor::generateWaitset(llvm::Module* M) {
   }
  std::cerr << "\n";
   return;
+  */
 }
 
 /***/
