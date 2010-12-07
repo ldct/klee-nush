@@ -545,8 +545,6 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 
 std::set<BasicBlock*> ExhaustiveMergingSearcher::getPausedBasicBlocks() {
 
-  //TODO: it may be possible to assert that pausedBB == { k | there exist ((?->k),v) in pausedStates}
-
   std::set<BasicBlock*> pausedBB;
 
   for (BBLinkMapES::const_iterator it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) 

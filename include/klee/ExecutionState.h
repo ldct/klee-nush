@@ -121,7 +121,7 @@ public:
   void removeFnAlias(std::string fn);
 
   std::set<ExecutionState*> pseudoMergedChildren;
-  
+  std::set<int> regions;  
 private:
   ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0), pseudoMergedChildren() {};   
   std::map<ref<Expr>, unsigned> bindings;
