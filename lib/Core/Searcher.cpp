@@ -604,9 +604,36 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
     ExecutionState *es = *it;
     Instruction *currInst = es->pc->inst;
     Instruction *prevInst = es->prevPC->inst;
+    BasicBlock* currBB = currInst->getParent();
+    BasicBlock* prevBB = prevInst->getParent();
+
+    if (es->regions.empty()) {
+      es->regions = std::set<int>(executor.regionsOfBB[currBB]);
+    }
+
     if (prevInst->getOpcode() == Instruction::Br) {
-      BasicBlock* currBB = currInst->getParent();
-      BasicBlock* prevBB = prevInst->getParent();
+      std::set<int> oldRegion = es->regions;
+      std::set<int> newRegion = executor.regionsOfBB[currBB];
+      
+      for (std::set<int>::iterator i = newRegion.begin(), e = newRegion.end(); i != e; ++i) { //TODO:set difference
+        if (oldRegion.find(*i) != oldRegion.end()) {
+          oldRegion.erase(*i);
+        }
+      }
+      
+      if (oldRegion.size() > 0) {
+        std::cerr << prevBB->getNameStr() 
+                  << "->" << currBB->getNameStr() 
+                  << ": exited region ";
+                  
+        for (std::set<int>::iterator j = oldRegion.begin(), je = oldRegion.end(); j != je; ++j)
+          std::cerr << *j << " ";
+           
+        std::cerr << "\n";
+      }
+      
+      es->regions = std::set<int>(executor.regionsOfBB[currBB]);
+      
       pausedStates[std::make_pair(prevBB, currBB)] = es;
       baseSearcher->removeState(es);
     }

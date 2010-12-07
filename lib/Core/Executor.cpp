@@ -3198,7 +3198,7 @@ void Executor::fnWaitset(llvm::Function* F) {
 void Executor::setRegion(llvm::Function* F, llvm::BasicBlock* BB, int i) {
   regionsOfBB[BB].insert(i);
   BBsOfRegion[std::make_pair(F,i)].insert(BB);
-  std::cerr << BB->getNameStr() << "->" << i  << " " << regionsOfBB[BB].size() << "\n";
+  std::cerr << BB->getNameStr() << "->" << i  << " " << "\n";
 }
 
 void Executor::generateWaitset(llvm::Module* M) {
