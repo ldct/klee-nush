@@ -77,8 +77,7 @@ ExecutionState::ExecutionState(KFunction *kf)
     coveredNew(false),
     forkDisabled(false),
     ignoreUpdate(0),
-    ptreeNode(0),
-    pseudoMergedChildren() {
+    ptreeNode(0) { 
   pushFrame(0, kf);
   std::cerr << "ES " << this <<  " created\n";
 }
@@ -89,8 +88,7 @@ ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     constraints(assumptions),
     queryCost(0.),
     ignoreUpdate(0),
-    ptreeNode(0),
-    pseudoMergedChildren() {}
+    ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
   while (!stack.empty()) popFrame();

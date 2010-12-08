@@ -16,6 +16,7 @@
 #include <utility> //make_pair
 #include <queue>
 #include <list>
+#include <iterator>
 
 #include "llvm/Support/CFG.h"
 
@@ -59,6 +60,8 @@ namespace klee {
     virtual void activate() {};
     virtual void deactivate() {};
 
+    std::vector<ExecutionState*> emptySet;
+    virtual std::vector<ExecutionState*>* statesVec() {return &emptySet;}
     // utility functions
 
     void addState(ExecutionState *es, ExecutionState *current = 0) {
@@ -88,6 +91,7 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "DFSSearcher\n";
     }
+    std::vector<ExecutionState*>* statesVec() {return &states;}
   };
 
   class RandomSearcher : public Searcher {
@@ -105,6 +109,8 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "RandomSearcher\n";
     }
+    std::vector<ExecutionState*>::iterator statesBegin() {return states.begin();}
+    std::vector<ExecutionState*>::iterator statesEnd() {return states.end();}
   };
 
   class WeightedRandomSearcher : public Searcher {
@@ -148,6 +154,8 @@ namespace klee {
       default                 : os << "<unknown type>\n"; return;
       }
     }
+   std::vector<ExecutionState*>::iterator statesBegin() {assert(0 && "not implemented;"); return this->emptySet.end();}
+   std::vector<ExecutionState*>::iterator statesEnd() {assert(0 && "not implemented;"); return emptySet.end();}
   };
 
   class RandomPathSearcher : public Searcher {
@@ -165,6 +173,8 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "RandomPathSearcher\n";
     }
+    std::vector<ExecutionState*>::iterator statesBegin() {assert(0 && "not implemented;"); return emptySet.end();}
+    std::vector<ExecutionState*>::iterator statesEnd() {assert(0 && "not implemented;"); return emptySet.end();} 
   };
 
   class MergingSearcher : public Searcher {
@@ -188,7 +198,7 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "MergingSearcher\n";
     }
-  };
+ };
 
   class BumpMergingSearcher : public Searcher {
     Executor &executor;
@@ -211,29 +221,29 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "BumpMergingSearcher\n";
     }
-  };
+ };
 
   class ExhaustiveMergingSearcher : public Searcher {
 
     typedef std::pair<llvm::BasicBlock*, llvm::BasicBlock*> BBLink;
     typedef std::map<BBLink, ExecutionState*> BBLinkMapES;
     typedef std::map<ExecutionState*, std::set<ExecutionState*> > ESMapESSet;
-    
+
     Executor &executor;
     Searcher *baseSearcher;
     
-    BBLinkMapES pausedStates;
-    ESMapESSet pseudoMergedChildren;
+    std::set<ExecutionState*> pausedStates;
+    //ESMapESSet pseudoMergedChildren;
   	
-  	std::list<ExecutionState*> selectStateESList;
+    std::list<ExecutionState*> selectStateESList;
   	
   private:
     bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);
     ExecutionState* doMerge(std::set<ExecutionState*> &possibleMerges);
     void cleanPausedStates();
+    std::set<ExecutionState*> states;
 
     //From BBLinkMapES pausedStates, get a list of all parents of ES. 
-    std::set<llvm::BasicBlock*> getPausedBasicBlocks();
 
   public:
     ExhaustiveMergingSearcher(Executor &executor, Searcher *baseSearcher);
@@ -247,7 +257,7 @@ namespace klee {
     void printName(std::ostream &os) {
       os << "ExhaustiveMergingSearcher\n";
     }
-  };
+ };
 
   class BatchingSearcher : public Searcher {
     Searcher *baseSearcher;
@@ -275,8 +285,8 @@ namespace klee {
          << ", baseSearcher:\n";
       baseSearcher->printName(os);
       os << "</BatchingSearcher>\n";
-    }
-  };
+      }
+ };
 
   class IterativeDeepeningTimeSearcher : public Searcher {
     Searcher *baseSearcher;

@@ -36,6 +36,7 @@
 #include <cassert>
 #include <fstream>
 #include <climits>
+#include <algorithm>
 
 using namespace klee;
 using namespace llvm;
@@ -470,22 +471,6 @@ bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState
   //TODO: might need to ignore the "return" bb...
   std::cerr << "\n";
   bool allOK = true;
-  for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
-    BasicBlock *pred = *pi;
-    BBLink link = std::make_pair(pred, bb);
-    BBLinkMapES::iterator state = pausedStates.find(link);
-
-    std::cerr << "pred state " << pred->getNameStr() << "...";
-    possibleMerges->insert(state->second);
-
-    if (state == pausedStates.end()) {
-      std::cerr << "no\n";
-      allOK = false;
-    }
-    else {
-      std::cerr << "ok\n";
-    }
-  }
   return allOK;
 }
 
@@ -527,6 +512,7 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
     if (mergeOK) {
       std::cerr << "merge ok! \n";
       std::cerr << "terminate " << es << "\n";
+      //TODO: let baseSearcher know about it first
       executor.terminateState(*es);
     }
     else {
@@ -543,26 +529,36 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
   //only target will be added back from baseSearcher. the pseudoMergedChildren won't.
 }
 
-std::set<BasicBlock*> ExhaustiveMergingSearcher::getPausedBasicBlocks() {
-
-  std::set<BasicBlock*> pausedBB;
-
-  for (BBLinkMapES::const_iterator it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) 
-    {
-      ExecutionState *es = it->second;  //(1st, 2nd) = (BBLink, ES)
-      BasicBlock *p = es->pc->inst->getParent();
-      pausedBB.insert(p);
-    }
-    
-  return pausedBB;
-}
-
-
 void ExhaustiveMergingSearcher::cleanPausedStates() {
 
-  std::set<BasicBlock*> pausedBB = getPausedBasicBlocks();
+  std::cerr << "There are " << pausedStates.size() << " paused states.\n";
+  for (std::set<ExecutionState*>::iterator it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) {
+    ExecutionState* es = *it;
+    std::set<int> esRegions = es->regionsWaitset;
 
-  for (std::set<BasicBlock*>::iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
+    std::cerr << "\t" << es 
+              << " waiting for [" ;
+    for (std::set<int>::iterator i = esRegions.begin(), e = esRegions.end(); i != e; ++i) std::cerr << *i;
+    std::cerr << "]...checking " <<  " " << baseSearcher->size();
+
+    bool seHasInEs = false; 
+    for (std::vector<ExecutionState*>::iterator st = baseSearcher->statesVec()->begin(), se = baseSearcher->statesVec()->end(); st != se; ++st) {
+      ExecutionState *se = *st;
+      std::set<int> seRegions = se->regions;
+      std::cerr << se << "[";
+      for (std::set<int>::iterator i = seRegions.begin(), e = seRegions.end(); i != e; ++i) std::cerr << *i;
+      std::cerr << "] ";
+      if ((se->pc->inst->getParent()->getParent() == es->pc->inst->getParent()->getParent()) && (find_first_of(seRegions.begin(), seRegions.end(), esRegions.begin(), esRegions.end()) != seRegions.end())) { 
+        seHasInEs = true;
+        break;
+      }
+    }
+    
+    if (seHasInEs == false)
+      std::cerr << "can go forward now";
+    std::cerr << "\n"; 
+  }
+/*  for (std::set<BasicBlock*>::iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
 
     BasicBlock* bb = *it;
     std::set<ExecutionState*> possibleMerges;
@@ -581,6 +577,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
       baseSearcher->addState(target);
     }
   }
+  */
 }
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {  
@@ -592,7 +589,6 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
                                        const std::set<ExecutionState*> &removedStates) {
   
   baseSearcher->update(current, addedStates, removedStates);
-
   if (!current) { 
     return;
   }
@@ -604,40 +600,48 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
     ExecutionState *es = *it;
     Instruction *currInst = es->pc->inst;
     Instruction *prevInst = es->prevPC->inst;
+
     BasicBlock* currBB = currInst->getParent();
     BasicBlock* prevBB = prevInst->getParent();
+
+    std::set<int> oldRegion = es->regions;
+    std::set<int> newRegion = executor.regionsOfBB[currBB];
+    std::set<int> difRegion;
+
+    states.insert(es);
 
     if (es->regions.empty()) {
       es->regions = std::set<int>(executor.regionsOfBB[currBB]);
     }
 
     if (prevInst->getOpcode() == Instruction::Br) {
-      std::set<int> oldRegion = es->regions;
-      std::set<int> newRegion = executor.regionsOfBB[currBB];
-      
-      for (std::set<int>::iterator i = newRegion.begin(), e = newRegion.end(); i != e; ++i) { //TODO:set difference
-        if (oldRegion.find(*i) != oldRegion.end()) {
-          oldRegion.erase(*i);
-        }
-      }
-      
-      if (oldRegion.size() > 0) {
-        std::cerr << prevBB->getNameStr() 
+      std::set_difference(oldRegion.begin(), oldRegion.end(), newRegion.begin(), newRegion.end(), std::inserter(difRegion, difRegion.end()));
+
+      if (difRegion.size() > 0) {
+        std::cerr << es << " " 
+                  << prevBB->getNameStr() 
                   << "->" << currBB->getNameStr() 
                   << ": exited region ";
                   
-        for (std::set<int>::iterator j = oldRegion.begin(), je = oldRegion.end(); j != je; ++j)
+        for (std::set<int>::iterator j = difRegion.begin(), je = difRegion.end(); j != je; ++j)
           std::cerr << *j << " ";
-           
+        
+        es->regionsWaitset = difRegion;
+        pausedStates.insert(es);
+        baseSearcher->removeState(es);
         std::cerr << "\n";
       }
       
       es->regions = std::set<int>(executor.regionsOfBB[currBB]);
-      
-      pausedStates[std::make_pair(prevBB, currBB)] = es;
-      baseSearcher->removeState(es);
     }
   }
+
+
+  for (std::set<ExecutionState*>::const_iterator it = removedStates.begin(), ie = removedStates.end(); it != ie; ++it) {
+    ExecutionState *es = *it;
+    states.erase(es);
+  }
+
   cleanPausedStates();
 }
 

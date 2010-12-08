@@ -121,7 +121,9 @@ public:
   void removeFnAlias(std::string fn);
 
   std::set<ExecutionState*> pseudoMergedChildren;
-  std::set<int> regions;  
+  std::set<int> regions; 
+  std::set<int> regionsWaitset; //the set of all regions you are waiting to empty 
+
 private:
   ExecutionState() : fakeState(false), underConstrained(0), ignoreUpdate(0), ptreeNode(0), pseudoMergedChildren() {};   
   std::map<ref<Expr>, unsigned> bindings;

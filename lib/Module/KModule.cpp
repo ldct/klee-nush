@@ -260,7 +260,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // deleted (via RAUW). This can be removed once LLVM fixes this
   // issue.
   pm.add(new IntrinsicCleanerPass(*targetData, false));
-  pm.add(new getRegionInfoPass(interpreter));
   pm.run(*module);
 
   if (opts.Optimize)
@@ -315,6 +314,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   }
   pm3.add(new IntrinsicCleanerPass(*targetData));
   pm3.add(new PhiCleanerPass());
+  pm3.add(new getRegionInfoPass(interpreter));
   pm3.run(*module);
 
   // For cleanliness see if we can discard any of the functions we
