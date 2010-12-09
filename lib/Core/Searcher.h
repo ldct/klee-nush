@@ -238,7 +238,7 @@ namespace klee {
     std::list<ExecutionState*> selectStateESList;
   	
   private:
-    bool canMerge(llvm::BasicBlock* bb, std::set<ExecutionState*> *possibleMerges);
+    bool canMerge(ExecutionState* pausedES);
     ExecutionState* doMerge(std::set<ExecutionState*> &possibleMerges);
     void cleanPausedStates();
     std::set<ExecutionState*> states;

@@ -466,12 +466,22 @@ ExhaustiveMergingSearcher::~ExhaustiveMergingSearcher() {
 
 ///
 
-bool ExhaustiveMergingSearcher::canMerge(BasicBlock* bb, std::set<ExecutionState*> *possibleMerges)
+bool ExhaustiveMergingSearcher::canMerge(ExecutionState* pausedES)
 {
-  //TODO: might need to ignore the "return" bb...
-  std::cerr << "\n";
-  bool allOK = true;
-  return allOK;
+   std::set<int> pausedEsRegions = pausedES->regionsWaitset;
+   bool seHasInEs = false; 
+   for (std::vector<ExecutionState*>::iterator st = baseSearcher->statesVec()->begin(), se = baseSearcher->statesVec()->end(); st != se; ++st) {
+     ExecutionState *se = *st;
+     std::set<int> seRegions = se->regions;
+     std::cerr << se << "[";
+     for (std::set<int>::iterator i = seRegions.begin(), e = seRegions.end(); i != e; ++i) std::cerr << *i;
+     std::cerr << "] ";
+     if ((se->pc->inst->getParent()->getParent() == pausedES->pc->inst->getParent()->getParent()) && (find_first_of(seRegions.begin(), seRegions.end(), pausedEsRegions.begin(), pausedEsRegions.end()) != seRegions.end())) { 
+       seHasInEs = true;
+       break;
+     }
+   }
+   return !seHasInEs;
 }
 
 ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &possibleMerges) 
@@ -514,14 +524,11 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
       std::cerr << "terminate " << es << "\n";
       //TODO: let baseSearcher know about it first
       executor.terminateState(*es);
+      pausedStates.erase(es);
     }
     else {
       std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n"; 
       target->pseudoMergedChildren.insert(es);
-       
-      //TODO: if merge failed because of different instruction pointers, do not pseudomerge.
-      //pseudomerges should only be used if the two path constraints / memory differ wildly, 
-      //and not for different instruction pointers.
     }
     baseSearcher->removeState(es);
   }
@@ -532,52 +539,30 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 void ExhaustiveMergingSearcher::cleanPausedStates() {
 
   std::cerr << "There are " << pausedStates.size() << " paused states.\n";
+  std::map<std::pair<llvm::Function*, llvm::BasicBlock*>, std::set<ExecutionState*> > esCanMergeAt;
   for (std::set<ExecutionState*>::iterator it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) {
-    ExecutionState* es = *it;
-    std::set<int> esRegions = es->regionsWaitset;
+    ExecutionState* pausedES = *it;
+    std::set<int> pausedEsRegions = pausedES->regionsWaitset;
 
-    std::cerr << "\t" << es 
+    std::cerr << "\t" << pausedES 
               << " waiting for [" ;
-    for (std::set<int>::iterator i = esRegions.begin(), e = esRegions.end(); i != e; ++i) std::cerr << *i;
-    std::cerr << "]...checking " <<  " " << baseSearcher->size();
+    for (std::set<int>::iterator i = pausedEsRegions.begin(), e = pausedEsRegions.end(); i != e; ++i) std::cerr << *i;
+    std::cerr << "]...checking " << baseSearcher->size() << " ";
 
-    bool seHasInEs = false; 
-    for (std::vector<ExecutionState*>::iterator st = baseSearcher->statesVec()->begin(), se = baseSearcher->statesVec()->end(); st != se; ++st) {
-      ExecutionState *se = *st;
-      std::set<int> seRegions = se->regions;
-      std::cerr << se << "[";
-      for (std::set<int>::iterator i = seRegions.begin(), e = seRegions.end(); i != e; ++i) std::cerr << *i;
-      std::cerr << "] ";
-      if ((se->pc->inst->getParent()->getParent() == es->pc->inst->getParent()->getParent()) && (find_first_of(seRegions.begin(), seRegions.end(), esRegions.begin(), esRegions.end()) != seRegions.end())) { 
-        seHasInEs = true;
-        break;
-      }
+   
+    if (canMerge(pausedES)) {
+      std::cerr << "can go forward now ";
+      esCanMergeAt[std::make_pair(pausedES->pc->inst->getParent()->getParent(), pausedES->pc->inst->getParent())].insert(pausedES);
     }
-    
-    if (seHasInEs == false)
-      std::cerr << "can go forward now";
-    std::cerr << "\n"; 
+   std::cerr << "\n"; 
   }
-/*  for (std::set<BasicBlock*>::iterator it = pausedBB.begin(), ie = pausedBB.end(); it != ie; ++it) {
-
-    BasicBlock* bb = *it;
-    std::set<ExecutionState*> possibleMerges;
-    bool allOK = canMerge(bb, &possibleMerges);
- 
-    if (allOK) {
-      ExecutionState* target = doMerge(possibleMerges);
-      //empty pausedStates
-      //TODO: some assumptions here?
-      for (pred_iterator pi = pred_begin(bb), pe = pred_end(bb); pi != pe; ++pi) {
-        BasicBlock *pred = *pi;
-        BBLink link = std::make_pair(pred, bb);
-        std::map<BBLink, ExecutionState*>::iterator BBLinkState = pausedStates.find(link);
-        pausedStates.erase(BBLinkState);
-      }
-      baseSearcher->addState(target);
-    }
+  for (std::map<std::pair<llvm::Function*, llvm::BasicBlock*>, std::set<ExecutionState*> >::iterator i = esCanMergeAt.begin(), e = esCanMergeAt.end(); i != e; ++i) {
+    std::cerr << "\t" << i->first.first->getNameStr() << "::" << i->first.second->getNameStr() << ":" << i->second.size() << "\n";
+    ExecutionState* target = doMerge(i->second);
+    pausedStates.erase(target);
+    baseSearcher->addState(target);
   }
-  */
+   
 }
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {  

@@ -44,6 +44,8 @@ void getRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool getRegionInfoPass::runOnFunction(llvm::Function &F) {
+  if (F.getNameStr().substr(0,3) == "mem") 
+    return 1;
   std::cerr << F.getNameStr() << "\n";
   RegionInfo* RI = &getAnalysis<RegionInfo>();
   
