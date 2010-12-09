@@ -111,19 +111,19 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
   ref<Expr> F = builder->False();
 
   //substitute the SourChicken principle
-  if (pairs.end()!=(pairs.find(std::make_pair(e,true)))) return T;//{std::cerr<<"\nIm Xuan Ji! True simplifying " << e <<"!!!\n";return T;}
-  if (pairs.end()!=(pairs.find(std::make_pair(e,false)))) return F;//{std::cerr<<"\nIm Xuan Ji! False simplifying " << e <<"!!!\n";return F;}
+  if (pairs.end()!=(pairs.find(std::make_pair(e,true)))) {std::cerr<<"\nIm Xuan Ji! True simplifying " << e <<"!!!\n";return T;}
+  if (pairs.end()!=(pairs.find(std::make_pair(e,false)))) {std::cerr<<"\nIm Xuan Ji! False simplifying " << e <<"!!!\n";return F;}
   
 	if(e->getKind()==Expr::And||e->getKind()==Expr::Or||e->getKind()==Expr::Eq){//if e can be split
 		ref<Expr> a = e->getKid(0);
 		ref<Expr> b = e->getKid(1);
-/*
+
     std::cerr << "\nhello im simplfying\n" 
               << e << "\ne kind = " << e->getKind() 
               << "\na = " << a << "\na kind = " << a->getKind() 
               << "\nb = " << b << "\nb kind = " << b->getKind()
               << "\npairs size = " << pairs.size();
-*/              
+          
 
 		bool aInBindings = (bindings.find(a) != bindings.end());
 		bool bInBindings = (bindings.find(b) != bindings.end());
@@ -131,8 +131,16 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
 		//bool aChildInBindings = (a->getKind() == Expr::Not) ? (bindings.find(a->getKid(0)) != bindings.end()) : false;
 		//bool bChildInBindings = (b->getKind() == Expr::Not) ? (bindings.find(b->getKid(0)) != bindings.end()) : false;
 		
-		bool aChildInBindings = (a->getKind() == Expr::Eq && a->getKid(0)==F) ? (bindings.find(a->getKid(1)) != bindings.end()) : false;
-		bool bChildInBindings = (b->getKind() == Expr::Eq && b->getKid(0)==F) ? (bindings.find(b->getKid(1)) != bindings.end()) : false;
+		bool aChildInBindings = (a->getKind() == Expr::Eq && 
+		                        a->getKid(0)==F && 
+		                        pairs.end()==pairs.find(std::make_pair(a->getKid(1),true)) && 
+		                        pairs.end()==pairs.find(std::make_pair(a->getKid(1),true))) ? 
+		                        (bindings.find(a->getKid(1)) != bindings.end()) : false;
+		bool bChildInBindings = (b->getKind() == Expr::Eq && 
+                          	b->getKid(0)==F && 
+		                         pairs.end()==pairs.find(std::make_pair(b->getKid(1),true)) &&
+		                         pairs.end()==pairs.find(std::make_pair(b->getKid(1),false))) ? 
+		                         (bindings.find(b->getKid(1)) != bindings.end()) : false;
 
     std::set< std::pair<ref<Expr>,bool> > pairsp = pairs;
     //std::set< std::pair<ref<Expr>,bool> > pairsq = pairs;
@@ -177,6 +185,7 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
 			a=simplifier(a,pairsp);
     }
 		else{
+		  std::cerr<<"BORING";
 			a=simplifier(a,pairsp);
 			b=simplifier(b,pairsp);
 		}
