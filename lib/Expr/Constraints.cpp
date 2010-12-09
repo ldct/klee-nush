@@ -186,7 +186,6 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
 			a=simplifier(a,pairsp);
     }
 		else{
-		  std::cerr<<"BORING";
 			a=simplifier(a,pairsp);
 			b=simplifier(b,pairsp);
 		}
