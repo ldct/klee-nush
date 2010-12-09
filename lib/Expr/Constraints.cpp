@@ -111,19 +111,20 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e,std::set< std::pair<ref<Expr
   ref<Expr> F = builder->False();
 
   //substitute the SourChicken principle
-  if (pairs.end()!=(pairs.find(std::make_pair(e,true)))) {std::cerr<<"\nIm Xuan Ji! True simplifying " << e <<"!!!\n";return T;}
-  if (pairs.end()!=(pairs.find(std::make_pair(e,false)))) {std::cerr<<"\nIm Xuan Ji! False simplifying " << e <<"!!!\n";return F;}
+  if (pairs.end()!=(pairs.find(std::make_pair(e,true)))) return T;//{std::cerr<<"\nIm Xuan Ji! True simplifying " << e <<"!!!\n";return T;}
+  if (pairs.end()!=(pairs.find(std::make_pair(e,false)))) return F;//{std::cerr<<"\nIm Xuan Ji! False simplifying " << e <<"!!!\n";return F;}
   
 	if(e->getKind()==Expr::And||e->getKind()==Expr::Or||e->getKind()==Expr::Eq){//if e can be split
 		ref<Expr> a = e->getKid(0);
 		ref<Expr> b = e->getKid(1);
-
+    
+    /*
     std::cerr << "\nhello im simplfying\n" 
               << e << "\ne kind = " << e->getKind() 
               << "\na = " << a << "\na kind = " << a->getKind() 
               << "\nb = " << b << "\nb kind = " << b->getKind()
               << "\npairs size = " << pairs.size();
-          
+    */
 
 		bool aInBindings = (bindings.find(a) != bindings.end());
 		bool bInBindings = (bindings.find(b) != bindings.end());
