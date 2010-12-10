@@ -84,8 +84,6 @@ struct bpf_insn {
 
 int bpf_maxbufsize=BPF_MAXBUFSIZE;
 
-
-
 int bpf_validate(struct bpf_insn *f, int len)
 {
 	int i;
