@@ -355,3 +355,11 @@ void ExecutionState::dumpStack(std::ostream &out) const {
     target = sf.caller;
   }
 }
+
+void ExecutionState::showStack(std::ostream &out) {
+  for (ExecutionState::stack_ty::const_iterator it = stack.begin(), ie = stack.end(); it != ie; ++it) {
+    const StackFrame &sf = *it;
+    Function *f = sf.kf->function;
+    out << f->getNameStr() << " ";
+  }
+}

@@ -5,7 +5,7 @@
  *      s: squeeze multiple output characters of string2 into one character
  */
 
-#define BUFFER_SIZE     1024
+#define BUFFER_SIZE     4
 #define ASCII           0377
 
 typedef char BOOL;
@@ -35,6 +35,8 @@ int main(int argc, char *argv[])
   unsigned char *ptr;
   int index = 1;
   short i;
+  
+  klee_make_symbolic(input, sizeof(input), "input");
 
   if (argc > 1 && argv[index][0] == '-') {
         for (ptr = (unsigned char *) &argv[index][1]; *ptr; ptr++) {
@@ -74,11 +76,6 @@ void convert()
 
   for (;;) {
         if (in_index == read_chars) {
-                if ((read_chars = read(0, (char *)input, BUFFER_SIZE)) <= 0) {
-                        if (write(1, (char *)output, out_index) != out_index)
-                                write(2, "Bad write\n", 10);
-                        exit(0);
-                }
                 in_index = 0;
         }
         c = input[in_index++];

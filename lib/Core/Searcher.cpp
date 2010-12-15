@@ -513,7 +513,7 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 
 
   for (std::set<ExecutionState*>::iterator ei = allPossibleMerges.begin(), ee = allPossibleMerges.end(); ei != ee; ++ei) {
-    if (ei == allPossibleMerges.begin())
+    if (*ei == target)
       continue;
     ExecutionState *es = *ei;
     std::cerr << es << "\n";
@@ -524,7 +524,6 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
       std::cerr << "terminate " << es << "\n";
       //TODO: let baseSearcher know about it first
       executor.terminateState(*es);
-      pausedStates.erase(es);
     }
     else {
       std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n"; 
@@ -559,9 +558,24 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
   for (std::map<std::pair<llvm::Function*, llvm::BasicBlock*>, std::set<ExecutionState*> >::iterator i = esCanMergeAt.begin(), e = esCanMergeAt.end(); i != e; ++i) {
     std::cerr << "\t" << i->first.first->getNameStr() << "::" << i->first.second->getNameStr() << ":" << i->second.size() << "\n";
     ExecutionState* target = doMerge(i->second);
-    pausedStates.erase(target);
+    for (std::set<ExecutionState*>::iterator p = i->second.begin(), pe = i->second.end(); p != pe; ++p) {
+      ExecutionState* pausedE = *p;
+      assert(pausedStates.find(pausedE) != pausedStates.end());
+      pausedStates.erase(pausedE);
+    }
     baseSearcher->addState(target);
   }
+  /*
+  std::cerr << "There are " << fnPausedStates.size() << " paused fn states.\n";
+  for (std::set<ExecutionState*>::iterator it = fnPausedStates.begin(), ie = fnPausedStates.end(); it != ie; ++it) {
+    ExecutionState* pausedES = *it;
+    
+    std::cerr << "\t" << pausedES
+              << "with stack";
+    //pausedES->showStack(std::cerr);
+    std::cerr << "\n";
+  }
+  */
    
 }
 
@@ -599,12 +613,13 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
       es->regions = std::set<int>(executor.regionsOfBB[currBB]);
     }
 
-    if (prevInst->getOpcode() == Instruction::Br) {
+    unsigned prevOpcode = prevInst->getOpcode();
+    if ((prevOpcode == Instruction::Br) || (prevOpcode == Instruction::Switch) || (prevOpcode == Instruction::IndirectBr)) {
       std::set_difference(oldRegion.begin(), oldRegion.end(), newRegion.begin(), newRegion.end(), std::inserter(difRegion, difRegion.end()));
 
       if (difRegion.size() > 0) {
-        std::cerr << es << " " 
-                  << prevBB->getNameStr() 
+        std::cerr << es 
+                  << " " << prevBB->getNameStr() 
                   << "->" << currBB->getNameStr() 
                   << ": exited region ";
                   
@@ -619,6 +634,13 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
       
       es->regions = std::set<int>(executor.regionsOfBB[currBB]);
     }
+    /*
+    if ((prevOpcode == Instruction::Ret) && (prevBB->getParent()->getNameStr() != "main")) {
+        fnPausedStates.insert(es);
+        baseSearcher->removeState(es);
+        std::cerr << "left function" << "\n";
+    }
+    */
   }
 
 

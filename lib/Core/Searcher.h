@@ -233,6 +233,7 @@ namespace klee {
     Searcher *baseSearcher;
     
     std::set<ExecutionState*> pausedStates;
+    std::set<ExecutionState*> fnPausedStates; //ES paused because they returned from a function
     //ESMapESSet pseudoMergedChildren;
   	
     std::list<ExecutionState*> selectStateESList;
