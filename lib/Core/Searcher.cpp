@@ -565,7 +565,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     }
     baseSearcher->addState(target);
   }
-  /*
+  
   std::cerr << "There are " << fnPausedStates.size() << " paused fn states.\n";
   for (std::set<ExecutionState*>::iterator it = fnPausedStates.begin(), ie = fnPausedStates.end(); it != ie; ++it) {
     ExecutionState* pausedES = *it;
@@ -575,7 +575,6 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     //pausedES->showStack(std::cerr);
     std::cerr << "\n";
   }
-  */
    
 }
 

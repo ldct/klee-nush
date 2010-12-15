@@ -5,7 +5,8 @@
  *      s: squeeze multiple output characters of string2 into one character
  */
 
-#define BUFFER_SIZE     4
+#define BUFFER_SIZE     1024
+#define USER_SIZE       4
 #define ASCII           0377
 
 typedef char BOOL;
@@ -19,8 +20,13 @@ BOOL com_fl, del_fl, sq_fl;
 unsigned char output[BUFFER_SIZE], input[BUFFER_SIZE];
 unsigned char vector[ASCII + 1];
 BOOL invec[ASCII + 1], outvec[ASCII + 1];
+char user_input[USER_SIZE];
 
+int my_read_called = 0;
 short in_index, out_index;
+
+
+
 
 #include <stdlib.h>
 
@@ -30,13 +36,25 @@ void map(unsigned char *string1, unsigned char *string2);
 void expand(char *arg, unsigned char *buffer);
 void complement(unsigned char *buffer);
 
+int my_read() {
+  if (my_read_called == 0) {
+    strcpy(user_input, input);
+    my_read_called++;
+    return strlen(input);
+  }
+  else {
+    return -1;
+  }
+}
+
 int main(int argc, char *argv[])
 {
   unsigned char *ptr;
   int index = 1;
   short i;
   
-  klee_make_symbolic(input, sizeof(input), "input");
+  klee_make_symbolic(user_input, sizeof(user_input), "user input");
+  user_input[USER_SIZE - 1] = '\n';
 
   if (argc > 1 && argv[index][0] == '-') {
         for (ptr = (unsigned char *) &argv[index][1]; *ptr; ptr++) {
@@ -75,9 +93,15 @@ void convert()
   short last = -1;
 
   for (;;) {
-        if (in_index == read_chars) {
-                in_index = 0;
-        }
+         if (in_index == read_chars) {
+                 if ((read_chars = my_read()) <= 0) {
+                         if (write(1, (char *)output, out_index) != out_index)
+                                 write(2, "Bad write\n", 10);
+                         exit(0);
+                 }
+                 in_index = 0;
+         }
+
         c = input[in_index++];
         coded = vector[c];
         if (del_fl && invec[c]) continue;
@@ -149,6 +173,14 @@ char *strcpy(char *dest, const char *src)
    while(*dest++ = *src++);
    return save;
 }
+
+size_t strlen(const char *org)
+{
+  const char *s = org;
+  while (*s++);
+  return --s - org;
+}
+
 
 
 void complement(buffer)
