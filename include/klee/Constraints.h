@@ -45,7 +45,8 @@ public:
 
   void doSimplifyConstraints();
   ref<Expr> simplify(ref<Expr> e);
-  ref<Expr> simplifier(ref<Expr> e,std::set< std::pair<ref<Expr>,bool> > pairs);
+  ref<Expr> simplifier(ref<Expr> e);
+  ref<Expr> replace(ref<Expr> e, int replacee, bool replaced);
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 
   void addConstraint(ref<Expr> e);
