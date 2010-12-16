@@ -101,7 +101,8 @@ ref<Expr> ConstraintManager::simplify(ref<Expr> e) {
   std::ofstream devnull("/dev/null");
   bindings = ExprPPrinter::printSingleExprAndReturnBindings(devnull, e);
   std::set<std::pair<ref<Expr>,bool> > empty;
-  return simplifier(e);
+  
+  return simplifier(simplifier(e)); //XXX: UGLY HACK
 }
 
 ref<Expr> ConstraintManager::simplifier(ref<Expr> e){
@@ -114,28 +115,21 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e){
 		ref<Expr> a = e->getKid(0);
 		ref<Expr> b = e->getKid(1);
     
-    
+    /*
     std::cerr << "\nhello im simplfying\n" 
               << e << "\ne kind = " << e->getKind() 
               << "\na = " << a << "\na kind = " << a->getKind() 
               << "\nb = " << b << "\nb kind = " << b->getKind();
-    
+    */
 
 		bool aInBindings = (bindings.find(a) != bindings.end());
 		bool bInBindings = (bindings.find(b) != bindings.end());
-		
-		//bool aChildInBindings = (a->getKind() == Expr::Not) ? (bindings.find(a->getKid(0)) != bindings.end()) : false;
-		//bool bChildInBindings = (b->getKind() == Expr::Not) ? (bindings.find(b->getKid(0)) != bindings.end()) : false;
-		
 		bool aChildInBindings = (a->getKind() == Expr::Eq && 
 		                        a->getKid(0)==F && 
 		                        (bindings.find(a->getKid(1)) != bindings.end()));
 		bool bChildInBindings = (b->getKind() == Expr::Eq && 
                           	b->getKid(0)==F && 
 		                         (bindings.find(b->getKid(1)) != bindings.end()));
-
-    //std::set< std::pair<ref<Expr>,bool> > pairsq = pairs;
-    //std::set< std::pair<ref<Expr>,bool> > pairsr = pairs;
     
     /*
     std::cerr << "\naInBindings = " << aInBindings
@@ -145,43 +139,33 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e){
     */          
 		if(e->getKind()==Expr::Or && aInBindings) {//make all a in b into false		
 			b=replace(b,bindings[a],false);
-			//b=simplifier(b);
 		}
 		else if(e->getKind()==Expr::And && aInBindings) {//make all a in b into true		
 			b=replace(b,bindings[a],true);
-			//b=simplifier(b);
 		}
 		else if(e->getKind()==Expr::Or && bInBindings) {//make all b in a into false		
 			a=replace(a,bindings[b],false);
-			//a=simplifier(a);
 		}
 		else if(e->getKind()==Expr::And && bInBindings) {//make all b in a into true		
 			a=replace(a,bindings[b],true);
-			//a=simplifier(a);
 		}
     else if(e->getKind()==Expr::Or && aChildInBindings) {//make all a in b into true
 			b=replace(b,bindings[a->getKid(1)],true);
-			//b=simplifier(b);
 		}
 		else if(e->getKind()==Expr::And && aChildInBindings) {//make all a in b into false
 			b=replace(b,bindings[a->getKid(1)],false);
-			//b=simplifier(b);
 		}
 		else if(e->getKind()==Expr::Or && bChildInBindings) {//make all b in a into true	
 			a=replace(a,bindings[b->getKid(1)],true);
-			//a=simplifier(a);
 		}
 		else if(e->getKind()==Expr::And && bChildInBindings) {//make all b in a into false	
 			a=replace(a,bindings[b->getKid(1)],false);
-			//a=simplifier(a);
     }
 
-		
-		 std::cerr              << "\nnow a = " << a << "\na kind = " << a->getKind()               << "\nb = " << b << "\nb kind = " << b->getKind();
-	  //std::cerr << "doing basic set theory with kind of e= " << e->getKind() <<"\na\n"<<a<<"\nb\n"<<b<<"\n";
 		//basic set theory		
 		a=simplifier(a);
 		b=simplifier(b);
+		
 		if(e->getKind()==Expr::And && (a==F||b==F)) return F;
 		if(e->getKind()==Expr::Or && (a==T||b==T)) return T;
 		if(e->getKind()==Expr::And && a==T) return b;
@@ -189,14 +173,12 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e){
 		if(e->getKind()==Expr::Or && a==F) return b;
 		if(e->getKind()==Expr::Or && b==F) return a;
 
-    if(e->getKind()==Expr::Eq && a==b) {std::cerr<<"\nXuanji your holy leader\n";return T;}
+    if(e->getKind()==Expr::Eq && a==b) return T;
     if(e->getKind()==Expr::Eq && ((a == T && b == F) 
                                 ||(a == F && b == T))) return F;
 
     if(e->getKind()==Expr::Eq && a==T) return b;
     if(e->getKind()==Expr::Eq && b==T) return a;
-    //if(e->getKind()==Expr::Eq && a==F) return builder->Not(b);
-    //if(e->getKind()==Expr::Eq && b==F) return builder->Not(a);
     
     if(e->getKind()==Expr::And) return builder->And(a,b);
     if(e->getKind()==Expr::Or) return builder->Or(a,b);
@@ -211,9 +193,7 @@ ref<Expr> ConstraintManager::replace(ref<Expr> e, int replacee, bool replaced){ 
   ref<Expr> T = builder->True();
   ref<Expr> F = builder->False();
   
-  if (bindings.find(e) != bindings.end()){		std::cerr<<"\nreplace"<<e<< "with" <<replaced<<"!!\n";
-    return (replaced ? T:F);
-   }
+  if (bindings.find(e) != bindings.end()) return (replaced ? T:F);
   
 	if(e->getKind()==Expr::And||e->getKind()==Expr::Or||e->getKind()==Expr::Eq){
 		ref<Expr> a = e->getKid(0);
