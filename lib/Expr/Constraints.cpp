@@ -97,15 +97,16 @@ void ConstraintManager::doSimplifyConstraints() {
   constraints = newConstraints;
 }
 
-ref<Expr> ConstraintManager::simplify(ref<Expr> e) {
+ref<Expr> ConstraintManager::simplify(ref<Expr> e) const {
   std::ofstream devnull("/dev/null");
-  bindings = ExprPPrinter::printSingleExprAndReturnBindings(devnull, e);
+  ConstraintManager* TH = const_cast<ConstraintManager*>(this);
+  TH->bindings = ExprPPrinter::printSingleExprAndReturnBindings(devnull, e);
   std::set<std::pair<ref<Expr>,bool> > empty;
   
   return simplifier(simplifier(e)); //XXX: UGLY HACK
 }
 
-ref<Expr> ConstraintManager::simplifier(ref<Expr> e){
+ref<Expr> ConstraintManager::simplifier(ref<Expr> e) const {
   klee::ExprBuilder *builder = createDefaultExprBuilder();
 
   ref<Expr> T = builder->True();
@@ -138,28 +139,28 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e){
               << "\nkthxbai\n";    
     */          
 		if(e->getKind()==Expr::Or && aInBindings) {//make all a in b into false		
-			b=replace(b,bindings[a],false);
+			b=replace(b,a,false);
 		}
 		else if(e->getKind()==Expr::And && aInBindings) {//make all a in b into true		
-			b=replace(b,bindings[a],true);
+			b=replace(b,a,true);
 		}
 		else if(e->getKind()==Expr::Or && bInBindings) {//make all b in a into false		
-			a=replace(a,bindings[b],false);
+			a=replace(a,b,false);
 		}
 		else if(e->getKind()==Expr::And && bInBindings) {//make all b in a into true		
-			a=replace(a,bindings[b],true);
+			a=replace(a,b,true);
 		}
     else if(e->getKind()==Expr::Or && aChildInBindings) {//make all a in b into true
-			b=replace(b,bindings[a->getKid(1)],true);
+			b=replace(b,a->getKid(1),true);
 		}
 		else if(e->getKind()==Expr::And && aChildInBindings) {//make all a in b into false
-			b=replace(b,bindings[a->getKid(1)],false);
+			b=replace(b,a->getKid(1),false);
 		}
 		else if(e->getKind()==Expr::Or && bChildInBindings) {//make all b in a into true	
-			a=replace(a,bindings[b->getKid(1)],true);
+			a=replace(a,b->getKid(1),true);
 		}
 		else if(e->getKind()==Expr::And && bChildInBindings) {//make all b in a into false	
-			a=replace(a,bindings[b->getKid(1)],false);
+			a=replace(a,b->getKid(1),false);
     }
 
 		//basic set theory		
@@ -188,13 +189,15 @@ ref<Expr> ConstraintManager::simplifier(ref<Expr> e){
 	return e;
 }
 
-ref<Expr> ConstraintManager::replace(ref<Expr> e, int replacee, bool replaced){ //do not ignore retval
+ref<Expr> ConstraintManager::replace(ref<Expr> e, ref<Expr> replacee, bool replaced) const { //do not ignore retval
   klee::ExprBuilder *builder = createDefaultExprBuilder();  
   ref<Expr> T = builder->True();
   ref<Expr> F = builder->False();
   
-  if (bindings.find(e) != bindings.end()) return (replaced ? T:F);
-  
+  if (e == replacee) {
+    assert(e.computeHash() == replacee.computeHash());
+    return (replaced ? T:F);
+  }
 	if(e->getKind()==Expr::And||e->getKind()==Expr::Or||e->getKind()==Expr::Eq){
 		ref<Expr> a = e->getKid(0);
 		ref<Expr> b = e->getKid(1);
@@ -215,7 +218,9 @@ ref<Expr> ConstraintManager::replace(ref<Expr> e, int replacee, bool replaced){ 
 ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   if (isa<ConstantExpr>(e))
     return e;
-
+/*
+  e = simplify(e);
+*/
   std::map< ref<Expr>, ref<Expr> > equalities;
   
   for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {

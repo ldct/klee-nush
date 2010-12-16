@@ -44,9 +44,9 @@ public:
   void simplifyForValidConstraint(ref<Expr> e);
 
   void doSimplifyConstraints();
-  ref<Expr> simplify(ref<Expr> e);
-  ref<Expr> simplifier(ref<Expr> e);
-  ref<Expr> replace(ref<Expr> e, int replacee, bool replaced);
+  ref<Expr> simplify(ref<Expr> e) const;
+  ref<Expr> simplifier(ref<Expr> e) const;
+  ref<Expr> replace(ref<Expr> e, ref<Expr> replacee, bool replaced) const;
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 
   void addConstraint(ref<Expr> e);
