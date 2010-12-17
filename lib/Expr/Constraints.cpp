@@ -103,7 +103,13 @@ ref<Expr> ConstraintManager::simplify(ref<Expr> e) const {
   TH->bindings = ExprPPrinter::printSingleExprAndReturnBindings(devnull, e);
   std::set<std::pair<ref<Expr>,bool> > empty;
   
-  return simplifier(simplifier(e)); //XXX: UGLY HACK
+  ref<Expr> mem_e;
+  do{//XXX: UGLIEST HACK
+    mem_e = e;
+    e = simplifier(e);
+  }while(mem_e != e);
+  return e;
+  //return simplifier(simplifier(e)); //XXX: UGLY HACK
 }
 
 ref<Expr> ConstraintManager::simplifier(ref<Expr> e) const {
