@@ -21,6 +21,7 @@
 #include <stp/c_interface.h>
 #else
 #include "../../stp/c_interface/c_interface.h"
+#include "../../stp/AST/AST.h"
 #endif
 
 #if ENABLE_STPLOG == 1

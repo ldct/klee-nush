@@ -224,9 +224,7 @@ ref<Expr> ConstraintManager::replace(ref<Expr> e, ref<Expr> replacee, bool repla
 ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   if (isa<ConstantExpr>(e))
     return e;
-/*
-  e = simplify(e);
-*/
+
   std::map< ref<Expr>, ref<Expr> > equalities;
   
   for(std::vector< ref<Expr> >::const_iterator it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {

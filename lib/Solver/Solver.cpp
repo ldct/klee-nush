@@ -9,6 +9,7 @@
 
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
+#include "klee/ExprBuilder.h"
 
 #include "SolverStats.h"
 #include "STPBuilder.h"
@@ -53,8 +54,8 @@ Solver::~Solver() {
 SolverImpl::~SolverImpl() {
 }
 
-bool Solver::simplify_vc(const Query& query, ref<Expr> &result){
-  return impl->stpsimplify(query,result);
+bool Solver::simplify_vc(ref<Expr> e){
+  return impl->stpsimplify(e);
 }
 
 bool Solver::evaluate(const Query& query, Validity &result) {
@@ -439,7 +440,8 @@ public:
                             const std::vector<const Array*> &objects,
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
-  bool stpsimplify(const Query& query, ref<Expr> &result);
+  bool stpsimplify(ref<Expr> e);
+  ref<Expr> exprFromVCExpr(VCExpr vce);
 };
 
 static unsigned char *shared_memory_ptr;
@@ -487,10 +489,33 @@ STPSolverImpl::~STPSolverImpl() {
   vc_Destroy(vc);
 }
 
-bool STPSolverImpl::stpsimplify(const Query& query, ref<Expr> &result){
-vc_simplify(vc,&result);
-return true;
-} 
+bool STPSolverImpl::stpsimplify(ref<Expr> e){
+  VCExpr vce = vc_simplify(vc,builder->construct(e));
+
+  exprFromVCExpr(vce);
+    
+  vc_printExpr(vc, vce);
+  return true;
+}
+
+ref<Expr> STPSolverImpl::exprFromVCExpr(VCExpr vce) {
+
+  klee::ExprBuilder *builder = createDefaultExprBuilder();  
+  ref<Expr> T = builder->True();
+  ref<Expr> F = builder->False();
+
+  BEEV::ASTNode q = (*(BEEV::ASTNode*)vce);
+  std::cout << "node has " << q.Degree() << "nodes and kind=" << q.GetKind() << "\n";
+  
+  switch (q.GetKind()) {
+    case (BEEV::OR):
+      std::cerr << "OR!!!\n";
+    default:
+      std::cerr << "nooo\n";
+  }
+
+  return builder->True();
+}
 
 /***/
 

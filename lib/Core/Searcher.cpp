@@ -546,7 +546,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     std::cerr << "\t" << pausedES 
               << " waiting for [" ;
     for (std::set<int>::iterator i = pausedEsRegions.begin(), e = pausedEsRegions.end(); i != e; ++i) std::cerr << *i;
-    std::cerr << "]...checking " << baseSearcher->size() << " ";
+    std::cerr << "]...checking " << baseSearcher->statesVec()->size() << " ";
 
    
     if (canMerge(pausedES)) {

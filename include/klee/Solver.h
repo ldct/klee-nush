@@ -67,7 +67,7 @@ namespace klee {
     Solver(SolverImpl *_impl) : impl(_impl) {}
     virtual ~Solver();
 
-    bool simplify_vc(const Query&, ref<Expr> &result); //XXX xuan check usefulness of vc
+    bool simplify_vc(ref<Expr> e);
 
     /// evaluate - Determine the full validity of an expression in particular
     /// state.
