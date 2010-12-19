@@ -441,7 +441,7 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
   bool stpsimplify(ref<Expr> e);
-  ref<Expr> exprFromVCExpr(VCExpr vce);
+  ref<Expr> exprFromASTNode(BEEV::ASTNode node);
 };
 
 static unsigned char *shared_memory_ptr;
@@ -492,26 +492,79 @@ STPSolverImpl::~STPSolverImpl() {
 bool STPSolverImpl::stpsimplify(ref<Expr> e){
   VCExpr vce = vc_simplify(vc,builder->construct(e));
 
-  exprFromVCExpr(vce);
+  BEEV::ASTNode q = (*(BEEV::ASTNode*)vce);
+
+  //exprFromASTNode(q);
     
-  vc_printExpr(vc, vce);
   return true;
 }
 
-ref<Expr> STPSolverImpl::exprFromVCExpr(VCExpr vce) {
+ref<Expr> STPSolverImpl::exprFromASTNode(BEEV::ASTNode node) {
 
   klee::ExprBuilder *builder = createDefaultExprBuilder();  
   ref<Expr> T = builder->True();
   ref<Expr> F = builder->False();
 
-  BEEV::ASTNode q = (*(BEEV::ASTNode*)vce);
-  std::cout << "node has " << q.Degree() << "nodes and kind=" << q.GetKind() << "\n";
+  std::cout << "node has " << node.Degree() << "nodes and kind=" << node.GetKind() << "\n";
+  //node.LispPrint(std::cerr);
   
-  switch (q.GetKind()) {
-    case (BEEV::OR):
-      std::cerr << "OR!!!\n";
+  switch (node.GetKind()) {
+    case BEEV::OR:
+      for (BEEV::ASTVec::const_iterator i = node.begin(), ie = node.end(); i != ie; ++i) {
+				exprFromASTNode(*i);
+      }
+      break;
+    case BEEV::AND:
+      for (BEEV::ASTVec::const_iterator i = node.begin(), ie = node.end(); i != ie; ++i) {
+				exprFromASTNode(*i);
+      }
+      break;
+    case BEEV::BVPLUS:
+      for (BEEV::ASTVec::const_iterator i = node.begin(), ie = node.end(); i != ie; ++i) {
+				exprFromASTNode(*i);
+      }
+      break;
+    case BEEV::EQ:
+    	exprFromASTNode(node[0]);
+    	exprFromASTNode(node[1]);
+      break;
+      
+    case BEEV::BVAND:
+    	exprFromASTNode(node[0]);
+    	exprFromASTNode(node[1]);
+    	break;
+  	case BEEV::BVCONCAT:
+    	exprFromASTNode(node[0]);
+    	exprFromASTNode(node[1]);
+    	break;
+  	case BEEV::READ:
+    	exprFromASTNode(node[0]);
+    	exprFromASTNode(node[1]);
+    	break;  		  	
+  	case BEEV::BVSLE:
+    	exprFromASTNode(node[0]);
+    	exprFromASTNode(node[1]);
+    	break;  		  	
+  	case BEEV::BVSLT:
+    	exprFromASTNode(node[0]);
+    	exprFromASTNode(node[1]);
+    	break;  
+    case BEEV::BVSX:
+    	exprFromASTNode(node[0]);
+    	exprFromASTNode(node[1]);
+      break;		  	
+    	
+  	case BEEV::NOT:
+    	exprFromASTNode(node[0]);
+    	break;
+  	case BEEV::BVCONST:
+  		break;
+		case BEEV::SYMBOL:
+			break;
     default:
-      std::cerr << "nooo\n";
+      std::cerr << "Unhandled: " << node.GetKind() << "\n";
+			exprFromASTNode(node[100]);
+      break;
   }
 
   return builder->True();

@@ -105,10 +105,11 @@ ExecutionState *ExecutionState::branch() {
   falseState->weight -= weight;
 
   // I don't know how to clear this in constructor...
+  /*
   std::cerr << "ES " << falseState 
             << " created by branching from " << this 
             << "\n"; 
-
+  */
   return falseState;
 }
 
@@ -162,7 +163,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
                << this << " with B:" << &b << "--\n";
   if (pc != b.pc)
     return false;
-
+#if 0
   //quick hack to get user input
   int ans;
   std::cout << "type 42 to fail merge\n";
@@ -175,7 +176,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     std::cerr << "ok, ill try to merge..\n";
   }
   
-
+#endif
   // XXX
   assert(symbolics==b.symbolics && "Symbolics differ!");
   {

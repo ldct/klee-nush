@@ -473,9 +473,9 @@ bool ExhaustiveMergingSearcher::canMerge(ExecutionState* pausedES)
    for (std::vector<ExecutionState*>::iterator st = baseSearcher->statesVec()->begin(), se = baseSearcher->statesVec()->end(); st != se; ++st) {
      ExecutionState *se = *st;
      std::set<int> seRegions = se->regions;
-     std::cerr << se << "[";
-     for (std::set<int>::iterator i = seRegions.begin(), e = seRegions.end(); i != e; ++i) std::cerr << *i;
-     std::cerr << "] ";
+     //std::cerr << se << "[";
+     //for (std::set<int>::iterator i = seRegions.begin(), e = seRegions.end(); i != e; ++i) std::cerr << *i;
+     //std::cerr << "] ";
      if ((se->pc->inst->getParent()->getParent() == pausedES->pc->inst->getParent()->getParent()) && (find_first_of(seRegions.begin(), seRegions.end(), pausedEsRegions.begin(), pausedEsRegions.end()) != seRegions.end())) { 
        seHasInEs = true;
        break;
@@ -489,11 +489,11 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
   ExecutionState *target = *possibleMerges.begin();
   std::set<ExecutionState*> allPossibleMerges; //possibleMerges U {es->childern | es in possibleMerges}
 
-  std::cerr << "merging... possibleMerges = \n";
+  //std::cerr << "merging... possibleMerges = \n";
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
-    std::cerr << es ;
+    //std::cerr << es ;
 
     allPossibleMerges.insert(es);
 
@@ -501,32 +501,32 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
       std::set<ExecutionState*> esC = es->pseudoMergedChildren;
       es->pseudoMergedChildren.clear();
       allPossibleMerges.insert(esC.begin(), esC.end());
-      std::cerr << ":";
+      //std::cerr << ":";
       for (std::set<ExecutionState*>::iterator esCi = esC.begin(), esCe = esC.end(); esCi != esCe; ++esCi) {
         ExecutionState* esCes = *esCi;
-        std::cerr << esCes << " ";
+        //std::cerr << esCes << " ";
       }
     }
-    std::cerr << "\n";
+    //std::cerr << "\n";
   }
-  std::cerr << "\n";
+  //std::cerr << "\n";
 
 
   for (std::set<ExecutionState*>::iterator ei = allPossibleMerges.begin(), ee = allPossibleMerges.end(); ei != ee; ++ei) {
     if (*ei == target)
       continue;
     ExecutionState *es = *ei;
-    std::cerr << es << "\n";
+    //std::cerr << es << "\n";
 
     bool mergeOK = target->merge(*es);
     if (mergeOK) {
-      std::cerr << "merge ok! \n";
-      std::cerr << "terminate " << es << "\n";
+      //std::cerr << "merge ok! \n";
+      //std::cerr << "terminate " << es << "\n";
       //TODO: let baseSearcher know about it first
       executor.terminateState(*es);
     }
     else {
-      std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n"; 
+      //std::cerr << "warning, merge failed; will now pseudomerge into" << target << "\n"; 
       target->pseudoMergedChildren.insert(es);
     }
     baseSearcher->removeState(es);
@@ -537,26 +537,26 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 
 void ExhaustiveMergingSearcher::cleanPausedStates() {
 
-  std::cerr << "There are " << pausedStates.size() << " paused states.\n";
+  //std::cerr << "There are " << pausedStates.size() << " paused states.\n";
   std::map<std::pair<llvm::Function*, llvm::BasicBlock*>, std::set<ExecutionState*> > esCanMergeAt;
   for (std::set<ExecutionState*>::iterator it = pausedStates.begin(), ie = pausedStates.end(); it != ie; ++it) {
     ExecutionState* pausedES = *it;
     std::set<int> pausedEsRegions = pausedES->regionsWaitset;
 
-    std::cerr << "\t" << pausedES 
-              << " waiting for [" ;
-    for (std::set<int>::iterator i = pausedEsRegions.begin(), e = pausedEsRegions.end(); i != e; ++i) std::cerr << *i;
-    std::cerr << "]...checking " << baseSearcher->statesVec()->size() << " ";
+    //std::cerr << "\t" << pausedES 
+    //          << " waiting for [" ;
+    //for (std::set<int>::iterator i = pausedEsRegions.begin(), e = pausedEsRegions.end(); i != e; ++i) std::cerr << *i;
+    //std::cerr << "]...checking " << baseSearcher->statesVec()->size() << " ";
 
    
     if (canMerge(pausedES)) {
-      std::cerr << "can go forward now ";
+      //std::cerr << "can go forward now ";
       esCanMergeAt[std::make_pair(pausedES->pc->inst->getParent()->getParent(), pausedES->pc->inst->getParent())].insert(pausedES);
     }
-   std::cerr << "\n"; 
+   //std::cerr << "\n"; 
   }
   for (std::map<std::pair<llvm::Function*, llvm::BasicBlock*>, std::set<ExecutionState*> >::iterator i = esCanMergeAt.begin(), e = esCanMergeAt.end(); i != e; ++i) {
-    std::cerr << "\t" << i->first.first->getNameStr() << "::" << i->first.second->getNameStr() << ":" << i->second.size() << "\n";
+    //std::cerr << "\t" << i->first.first->getNameStr() << "::" << i->first.second->getNameStr() << ":" << i->second.size() << "\n";
     ExecutionState* target = doMerge(i->second);
     for (std::set<ExecutionState*>::iterator p = i->second.begin(), pe = i->second.end(); p != pe; ++p) {
       ExecutionState* pausedE = *p;
@@ -566,6 +566,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     baseSearcher->addState(target);
   }
   
+  /*
   std::cerr << "There are " << fnPausedStates.size() << " paused fn states.\n";
   for (std::set<ExecutionState*>::iterator it = fnPausedStates.begin(), ie = fnPausedStates.end(); it != ie; ++it) {
     ExecutionState* pausedES = *it;
@@ -575,7 +576,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
     //pausedES->showStack(std::cerr);
     std::cerr << "\n";
   }
-   
+  */ 
 }
 
 ExecutionState &ExhaustiveMergingSearcher::selectState() {  
@@ -617,18 +618,18 @@ void ExhaustiveMergingSearcher::update(ExecutionState *current,
       std::set_difference(oldRegion.begin(), oldRegion.end(), newRegion.begin(), newRegion.end(), std::inserter(difRegion, difRegion.end()));
 
       if (difRegion.size() > 0) {
-        std::cerr << es 
+      /*  std::cerr << es 
                   << " " << prevBB->getNameStr() 
                   << "->" << currBB->getNameStr() 
                   << ": exited region ";
                   
         for (std::set<int>::iterator j = difRegion.begin(), je = difRegion.end(); j != je; ++j)
           std::cerr << *j << " ";
-        
+      */  
         es->regionsWaitset = difRegion;
         pausedStates.insert(es);
         baseSearcher->removeState(es);
-        std::cerr << "\n";
+        //std::cerr << "\n";
       }
       
       es->regions = std::set<int>(executor.regionsOfBB[currBB]);

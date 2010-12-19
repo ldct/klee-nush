@@ -3348,13 +3348,13 @@ void Executor::getConstraintLog(const ExecutionState &state,
     ExprPPrinter::printConstraints(info, state.constraints);
     ConstraintManager c = state.constraints;
 
-    std::cerr << "stp simplified: ";
-    for (std::vector<ref<Expr> >::const_iterator i = c.begin(), ie = c.end(); i != ie; ++i) {
-      ref<Expr> e = *i;
-      std::cerr << "\nFROM\n" << e << "\nTO\n";
-      solver->stpSolver->simplify_vc(e);
-      std::cerr << "\n";
-    }
+    //std::cerr << "stp simplified: ";
+    //for (std::vector<ref<Expr> >::const_iterator i = c.begin(), ie = c.end(); i != ie; ++i) {
+      //ref<Expr> e = *i;
+      //std::cerr << "\nFROM\n" << e << "\nTO\n";
+      //solver->stpSolver->simplify_vc(e);
+      //std::cerr << "\n";
+    //}
     
     ExprPPrinter::printSimplifiedConstraints(info, c);
     
