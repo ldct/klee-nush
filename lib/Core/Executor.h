@@ -45,11 +45,7 @@ namespace llvm {
   class TargetData;
   class Twine;
   class Value;
-  class FunctionPass;
-  class RegionInfo;
-  
-  FunctionPass *createRegionInfoPass();
-  
+  class FunctionPass;  
 }
 
 namespace klee {  

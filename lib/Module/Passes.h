@@ -82,6 +82,22 @@ public:
   virtual bool runOnModule(llvm::Module &M);
 };
 
+class rewriteReturnPass : public llvm::FunctionPass {
+  static char ID;
+
+public:
+  rewriteReturnPass()
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR < 8)
+    : llvm::FunctionPass((intptr_t) &ID)
+#else
+    : llvm::FunctionPass(ID)
+#endif
+     {}
+  
+  virtual bool runOnFunction(llvm::Function &F);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+};
+
 class getRegionInfoPass : public llvm::FunctionPass {
   static char ID;
   klee::Interpreter *interpreter;

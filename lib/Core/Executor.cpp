@@ -3202,17 +3202,6 @@ void Executor::setRegion(llvm::Function* F, llvm::BasicBlock* BB, int i) {
 }
 
 void Executor::generateWaitset(llvm::Module* M) {
-  /*
-  std::cerr << "\ngenerateWaitset called on module!\n";
-  for (Module::iterator f = M->begin(), fe = M->end(); f != fe; ++f) {
-    if (!f->isIntrinsic() && f->getNameStr() != "klee_make_symbolic") {
-      llvm::RegionInfo *RI = cast<RegionInfo>(llvm::createRegionInfoPass());
-  
-    }
-  }
- std::cerr << "\n";
-  return;
-  */
 }
 
 /***/

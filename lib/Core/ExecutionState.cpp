@@ -158,11 +158,14 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
 }
 
 bool ExecutionState::merge(const ExecutionState &b) {
+
+  //std::cerr << "OHAI\n";
   if (DebugLogStateMerge)
     std::cerr << "-- attempting merge of A:" 
                << this << " with B:" << &b << "--\n";
   if (pc != b.pc)
     return false;
+  //return false;
 #if 0
   //quick hack to get user input
   int ans;
@@ -268,6 +271,11 @@ bool ExecutionState::merge(const ExecutionState &b) {
   }
   
   // merge stack
+  
+  std::cerr << "merging common=" << commonConstraints.size()
+            << "inA=" << aSuffix.size()
+            << "inB=" << bSuffix.size()
+            << "\n";
 
   ref<Expr> inA = ConstantExpr::alloc(1, Expr::Bool);
   ref<Expr> inB = ConstantExpr::alloc(1, Expr::Bool);
