@@ -179,7 +179,7 @@ int bpf_validate(struct bpf_insn *f, int len)
 		default:
 			return 0;
 		}
-
+	klee_merge();
 	i = 1;
 		p = &f[i];
 		switch (BPF_CLASS(p->code)) {
@@ -270,7 +270,7 @@ int bpf_validate(struct bpf_insn *f, int len)
 		default:
 			return 0;
 		}
-
+	klee_merge();
 	i = 2;
 		p = &f[i];
 		switch (BPF_CLASS(p->code)) {
