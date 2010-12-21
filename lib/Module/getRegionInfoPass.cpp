@@ -44,11 +44,12 @@ void getRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool getRegionInfoPass::runOnFunction(llvm::Function &F) {
+	std::cerr << "OHAI\n";
   if (F.getNameStr().substr(0,3) == "mem") 
     return 1;
   std::cerr << F.getNameStr() << "\n";
   RegionInfo* RI = &getAnalysis<RegionInfo>();
-  
+  std::cerr << "OK?\n";
   Region* Top = RI->getTopLevelRegion();
 
   std::map<Region*, int> regionID;

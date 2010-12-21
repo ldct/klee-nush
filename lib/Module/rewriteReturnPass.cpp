@@ -61,13 +61,15 @@ bool rewriteReturnPass::runOnFunction(llvm::Function &F) {
   
   for (pred_iterator PI = pred_begin(endBB), E = pred_end(endBB); PI != E; ++PI) {
     BasicBlock *Pred = *PI;
+ 		if (PI == pred_begin(endBB))
+ 			continue;
     preds.push_back(Pred);
   }
   
   for (std::vector<BasicBlock*>::iterator I = preds.begin(), E = preds.end(); I != E; ++I) {
     BasicBlock* BB = *I;
     
-    std::cerr << BB->getNameStr() << ":";
+    //std::cerr << BB->getNameStr() << ":";
     
     BasicBlock::iterator e = BB->end();
     e--;
@@ -92,14 +94,13 @@ ReplaceInstWithInst(instToReplace->getParent()->getInstList(), ii,
 
     //std::cerr << "replace " << e->getOpcode();
     TerminatorInst* TI = BB->getTerminator();
-    std::cerr << "lol " << TI->getOpcodeName() << "\n";
+    //std::cerr << "lol " << TI->getOpcodeName() << "\n";
     
+    //endBB->removePredecessor(BB);
+
     BasicBlock::iterator ii(TI);
-
-    ReplaceInstWithValue(TI->getParent()->getInstList(), ii,
+    ReplaceInstWithInst(TI->getParent()->getInstList(), ii,
                          ReturnInst::Create(F.getContext(), retVal));
-
-    endBB->removePredecessor(BB);
      
   }
   std::cerr << "BAIS\n";
