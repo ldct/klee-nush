@@ -179,12 +179,13 @@ int bpf_validate(struct bpf_insn *f, int len)
 		default:
 			return 0;
 		}
+		klee_merge();
 
 	}
 	return BPF_CLASS(f[len - 1].code) == BPF_RET;
 }
 
-#define N 3
+#define N 10
 
 int main(int argc, char *argv[]){
   

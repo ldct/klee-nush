@@ -43,6 +43,7 @@ void rewriteReturnPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool rewriteReturnPass::runOnFunction(llvm::Function &F) {
+  
   if (F.getNameStr().substr(0,3) == "mem") 
     return 1;
   
@@ -82,25 +83,19 @@ bool rewriteReturnPass::runOnFunction(llvm::Function &F) {
     llvm::StoreInst* SI = cast<llvm::StoreInst>(e);
     
     Value* retVal = SI->getValueOperand();
-/*
-AllocaInst* instToReplace = ...;
-BasicBlock::iterator ii(instToReplace);
 
-ReplaceInstWithInst(instToReplace->getParent()->getInstList(), ii,
-                    new AllocaInst(Type::Int32Ty, 0, "ptrToReplacedInt"));
-*/
-
-    //e = Pred->back();
-
-    //std::cerr << "replace " << e->getOpcode();
     TerminatorInst* TI = BB->getTerminator();
-    //std::cerr << "lol " << TI->getOpcodeName() << "\n";
-    
-    //endBB->removePredecessor(BB);
 
     BasicBlock::iterator ii(TI);
+    
+    BasicBlock* brTarget = BB->getSinglePredecessor();
+     
+    //replace the "BR" terminator inst with something else
     ReplaceInstWithInst(TI->getParent()->getInstList(), ii,
-                         ReturnInst::Create(F.getContext(), retVal));
+    //                    BranchInst::Create(brTarget));
+                        ReturnInst::Create(F.getContext(), retVal));
+                        
+    BranchInst::Create(BB, BB);
      
   }
   std::cerr << "BAIS\n";
