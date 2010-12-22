@@ -1,4 +1,4 @@
-\documentclass[]{article}
+\documentclass[12pt]{article}
 
 %% Bibliography style:
 \usepackage{graphicx}
@@ -11,11 +11,14 @@
 %% bibpunct sets the punctuation used for formatting citations.
 \bibpunct{(}{)}{;}{a}{,}{,}
 
-\title{A Very Simple Template}
+\setlength{\parskip}{1.5ex plus 0.5ex minus 0.2ex}
+\linespread{0}
+
+\title{State Merging for Automatic Test Generation}
 \date{}
 
 \author{
-Kuan Xiang Wen $^{1}$, Li Xuan Ji $^{1}$, Tan Jia Qi $^{2}$\\
+Kuan Xiang Wen$^{1}$, Li Xuan Ji$^{1}$, Tan Jia Qi$^{2}$\\
 \vspace{1 mm} \\
 \small{$^{1}$NUS High School of Math and Science}\\
 \small{$^{2}$DSO National Laboratories CSL Division}
@@ -24,22 +27,29 @@ Kuan Xiang Wen $^{1}$, Li Xuan Ji $^{1}$, Tan Jia Qi $^{2}$\\
 \begin{document}
 \maketitle
 \begin{abstract}
-This is the paper's abstract \ldots
+Automatic test generation is the problem of generating test cases in a given program for the purposes of vulnerability detection and program verification. One method of achieving this is Symbolic Execution, which executes the program with \emph{symbolic} variables to quickly test every possible execution path that the program may take. Often symbolic execution creates many execution paths that are similar; our project focuses on determining when these paths can be merged to cut down on repetitive operations. In addition, we have developed a pseudomerging algorithm to avoid situations where the merging algorithm performes worse. We prove our algorithm's correctness and optimality and demonstrate its practical usefulness by generating test cases for real world programs. We observe speed up from exponential to linear time for certain programs.
 \end{abstract}
 
 \section{Introduction}
-This is time for all good men to come to the aid of their party!
+Testing is very important. We spend a lot of money on it. Unfortunately, the only widely used methods to generate test cases are a)manually writing them and b)generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
+
+Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we mark the input to the program as symbolic, ie, it can be anything, and we execute the program code on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths. 
+
+In our work, we extend a state-of-the-art symbolic execution engine, Klee, developed at Stanford Univeristy. Klee is written in C++ and runs on llvm bitcode. It is good.
 
 \paragraph{Outline}
-The remainder of this article is organized as follows.
-Section~\ref{previous work} gives account of previous work.
-Our new and exciting results are described in Section~\ref{results}.
-Finally, Section~\ref{conclusions} gives the conclusions.
+The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while \S\ref{implementation} describes our implementation. Our results are described in \S\ref{evaluation}. Finally, \S\ref{conclusions} gives the conclusions.
 
-\section{Previous work}\label{previous work}
+\section{Overview}\label{overview}
 A much longer example was written by Gil.
 
-\section{Results}\label{results}
+\section{Algorithm}\label{algorithm}
+In this section we describe the results.
+
+\section{Implementation}\label{implementation}
+In this section we describe the results.
+
+\section{Evaluation}\label{evaluation}
 In this section we describe the results.
 
 \section{Conclusions}\label{conclusions}
@@ -48,5 +58,12 @@ We worked hard, and achieved very little.
 %\bibliographystyle{abbrv}
 %\bibliography{main}
 
-\end{document}
 
+
+
+
+\section{Appendix}
+
+
+
+\end{document}
