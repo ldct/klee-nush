@@ -23,6 +23,7 @@
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/RegionPrinter.h"
 #include "llvm/Type.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -40,7 +41,6 @@ char getRegionInfoPass::ID;
 void getRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<RegionInfo>();
-
 }
 
 bool getRegionInfoPass::runOnFunction(llvm::Function &F) {

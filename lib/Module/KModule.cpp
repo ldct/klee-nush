@@ -37,6 +37,7 @@
 #include "llvm/System/Path.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Analysis/RegionPrinter.h"
 
 #include <sstream>
 
@@ -316,6 +317,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   pm3.add(new PhiCleanerPass());
   pm3.add(new rewriteReturnPass());
   pm3.add(new getRegionInfoPass(interpreter));
+  //pm3.add(llvm::createRegionViewerPass());
   pm3.run(*module);
 
   // For cleanliness see if we can discard any of the functions we

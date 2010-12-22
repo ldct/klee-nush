@@ -92,13 +92,14 @@ bool rewriteReturnPass::runOnFunction(llvm::Function &F) {
      
     //replace the "BR" terminator inst with something else
     ReplaceInstWithInst(TI->getParent()->getInstList(), ii,
-    //                    BranchInst::Create(brTarget));
                         ReturnInst::Create(F.getContext(), retVal));
                         
     BranchInst::Create(BB, BB);
      
   }
   std::cerr << "BAIS\n";
+  
+  //F.viewCFG();
   
   return 1;
 }
