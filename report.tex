@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[12pt,twocolumn,a4paper]{article}
 
 %% Bibliography style:
 \usepackage{graphicx}
@@ -31,23 +31,54 @@ Automatic test generation is the problem of generating test cases in a given pro
 \end{abstract}
 
 \section{Introduction}
-Testing is very important. We spend a lot of money on it. Unfortunately, the only widely used methods to generate test cases are a)manually writing them and b)generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
+Testing is very important. We spend a lot of money on it. Unfortunately, the only widely used methods to generate test cases are a) manually writing them and b) generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
 
 Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we mark the input to the program as symbolic, ie, it can be anything, and we execute the program code on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths. 
 
 In our work, we extend a state-of-the-art symbolic execution engine, Klee, developed at Stanford Univeristy. Klee is written in C++ and runs on llvm bitcode. It is good.
 
 \paragraph{Outline}
+
 The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while \S\ref{implementation} describes our implementation. Our results are described in \S\ref{evaluation}. Finally, \S\ref{conclusions} gives the conclusions.
 
 \section{Overview}\label{overview}
-A much longer example was written by Gil.
+Klee has a poewrful tool. However, when Klee enters a loop, especially one with if-statements and switch-statements, the number of execution paths multiplies as for each new if-statement or switch-statement, more constraints are added. Hence there are many similar execution paths that can be merged, but all seperately processed, taking up more time than necessary.
+
+In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major methods: simplifying and merging. The simplifying function takes the multiple constraints from the different execution paths and, using some set theory, simplifies them into something smaller that is easier for the merge function to handle. The merge function itself uses a mix of several libraries with its own algorithm to determine when and where is suitable to merge such that the process will be without loss of completeness.
+
+In the merge function, we use a method of regions. Lines of executions are first grouped into \emph{Basic Blocks}. A tree is created that shows the flow of the function. We then group the basic blocks into \emph{Regions}. The algorithm of creating regions single rule: Each region has only one entry and one exit. As such, there may be regions within regions, but that makes our work easier. 
+
+INSERT IMAGE HERE?
 
 \section{Algorithm}\label{algorithm}
-In this section we describe the results.
+\subsection{Simplify}
+In this section we describe the methods.
+Our code is written in C++.
+
+\begin{verbatim}
+\begin{lol}
+\end{verbatim}
+
+The first part of our simplifier uses a principle that we developed ourselves:
+Imagine a tree $A\cap(B\cup A)$. If the first A were \emph{False}, the entire tree will simplify to \emph{False}, immediately. Hence, the $A$ in the tree cannot be False. As a result, we can substitute the 2nd $A$ with \emph{True}, without loss of generality. The tree will then simplify to $A\cap(B\cup A)$ which simplifies to $A$. Thorough checking will get the same result.
+
+In Klee, constraints of an execution path are constructed by terms and binary operators. The simplifier algorithm utilizes this principle. As the constraints are made of binary operators, we can do this. As the simplifier travels down a tree, it memorizes which terms it has seen (binaries) and then substitutes the memorized binaries as it goes down the tree.
+
+In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification. This is where the function will turn two branching execution state into a single execution state. These two instructions will then be recursed down a constraint tree.
+
+The expression is also memoized in the beginning, and the simplifier algorithm will be run repeatedly until the expression does not change.
+
+\subsection{Merge}
+The merging algorithm utilizes \emph{Regions}. For every region, whenever an execution path leaves a region, it waits for whatever execution in that region to end, before it merges all the execution states and continues. This way, we will not have execution paths running all over the place, which takes more time to process.
+
+A problem that arises is that \emph{return} are similar to \emph{goto} statements. A \emph{return} statement forces an execution state to point straight toward the end of the program. Hence, what could have been a region, has another 'exit' and does not fufil the 'one-entry-one-exit' rule. As a result, no merging will be done. This problem is common as many real-world programs uses switch-case statements with \emph{return} statements inside. To curb this problem, we automatically tweak the \emph{return} statements, such that each return statement has a fake infinite loop such that they will not point to the end of the program. This infinite loop is put after the return statement, hence will never be executed, but the tree will change such that there will not be an additional exit, thus and the region will be able to be created.
 
 \section{Implementation}\label{implementation}
 In this section we describe the results.
+
+
+
+
 
 \section{Evaluation}\label{evaluation}
 In this section we describe the results.
