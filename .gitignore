@@ -2,6 +2,14 @@
 *.sum
 *.exp
 *.config
+*.o
+*.dot
+*.s
+nush-testcase/*.svg
+nush-testcase/*.png
+nush-testcase/*.jpg
+report.*
+!report.tex
 Release/
 Release+Asserts/
 config.status
