@@ -35,14 +35,14 @@ Testing is very important. We spend a lot of money on it. Unfortunately, the onl
 
 Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we mark the input to the program as symbolic, ie, it can be anything, and we execute the program code on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths. 
 
-In our work, we extend a state-of-the-art symbolic execution engine, Klee, developed at Stanford Univeristy. Klee is written in C++ and runs on llvm bitcode. It is good.
+In our work, we extend a state-of-the-art symbolic execution engine, \textbf{Klee}, developed at Stanford Univeristy. Klee is written in C++ and runs on llvm bitcode. It is good.
 
 \paragraph{Outline}
 
 The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while \S\ref{implementation} describes our implementation. Our results are described in \S\ref{evaluation}. Finally, \S\ref{conclusions} gives the conclusions.
 
 \section{Overview}\label{overview}
-Here is an example of a test program we used, Berkeley Packet Filter (or bpf for short), to illustrate how Klee and our merging algorithm works.
+Here is an example of a test program we used, Berkeley Packet Filter (or bpf for short), to illustrate our merging algorithm.
 
 \begin{verbatim}
 1. int bpf_validate(struct bpf_insn *f, int len)
@@ -65,8 +65,8 @@ Here is an example of a test program we used, Berkeley Packet Filter (or bpf for
 18.        case BPF_ST:
 19.        ...
 20.        }
-21.	}
-22.	return BPF_CLASS(f[len - 1].code) == BPF_RET;
+21.     }
+22.     return BPF_CLASS(f[len - 1].code) == BPF_RET;
 23. }
 24. #define N 10 
 25. int main(int argc, char *argv[]){  
@@ -78,33 +78,37 @@ Here is an example of a test program we used, Berkeley Packet Filter (or bpf for
 31.}
 \end{verbatim}
 
-Klee, with our algorithm, runs as follows:
 \begin{enumerate}
-\item Klee makes the variable ins\_buffer symbolic in ln29. 
-\item In line 6, the first fork occurs. After executing line 7, Klee will now have 2 execution states with different constraints, so that it can carry on the possible states that may lead to a bug somewhere else in the program. Our algorithm will attempt to merge these two paths and the new constraints as they do not differ much, but without losing any information.
-\item In line 8, the for-loop creates a fork. Each time the for-loop is run, there will be a new fork, creating new execution states. 
-\item At line 10, the switch-statement creates as many forks as the number of cases. This can multiply with the number of forks created by the for-loop.
-\item Also in line 13, the switch-statement within the switch-statement of line 10 will create more branches. The problem caused by too much branching like this causes the statements in line 19 to be tested many more times than usual, as there are many different path conditions to test. Hence, we try to merge the branches in line16 to stop the problem.
-\item At the end of the switch statement, at line 20, our algorithm will attempt to merge all the branches created by the for-loop, since their route of execution does not differ, and as it will reduce the number of execution paths into one, fixing the problem of multiple execution states caused by the combination of line 8 and line 10.
+\item The variable ins\_buffer is marked as symbolic in ln29. 
+\item In line 8, the for-loop creates a fork, one where the guard is true and one where it is false. Each time the for-loop is run, there will be a new fork, creating new execution states. 
+\item At line 10, the switch statement forks execution $N-1$ times, where $N$ is the number of case statements
+\item At line 13, the nested switch statementA Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph. will create more execution states. 
+\item When the first execution state reaches line 20, it will not continue executing.
+\item When all execution states reach line 20, our algorithm will merge all of them, since their constraints do not differ much.
 \end{enumerate}
+
+This means that if a single execution state enters the loop body, all the execution states created by branching from it will merge back with it at the end of the switch statement, so no net additional execution states are created. In contrast, Klee creates $N-1$ new execution states and does not merge them back. This means klee will create $N^\text{len} - 1$ execution states and will have exponential complexity, while our algorithm has linear complexity.
+
+The main challenge our algorithm solves is determining when an execution state must pause. If an execution state is executed past the merge point (at line 20) then a chance to merge is missed.
 
 \section{Algorithm}\label{algorithm}
 In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major operations: simplifying and merging. The simplifying function takes the multiple constraints from the different execution paths and, using some set theory, simplifies them into something smaller that is easier for the merge function to handle. The merge function itself uses a mix of several libraries with its own algorithm to determine when and where is suitable to merge such that the process will be without loss of completeness.
 
 \subsection{Merge}
-In the merge function, we use a method of \emph{Regions}. Lines of executions are first grouped into \emph{Basic Blocks}. A tree is created that shows the flow of the function. We then group the basic blocks into \emph{Regions}. The algorithm of creating regions single rule: Each region has only one entry and one exit. As such, there may be regions within regions, as it should. In our algorithm, whenever an execution path leaves a region, it waits for whatever execution in that region to end, before merging all the execution states and continues. This way, we will not have execution paths running all over the place, which takes more time to process.
+Internally, llvm bitcode consists of \textbf{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
 
-A problem that arises is that \emph{return} are similar to \emph{goto} statements. A \emph{return} statement forces an execution state to point straight toward the end of the program. Hence, what could have been a region, has another 'exit' and does not fufil the 'one-entry-one-exit' rule. As a result, no merging will be done. This problem is common as many real-world programs uses switch-case statements with \emph{return} statements inside. To curb this problem, we automatically tweak the \emph{return} statements, such that each return statement has a fake infinite loop such that they will not point to the end of the program. This infinite loop is put after the return statement, hence will never be executed, but the tree will change such that there will not be an additional exit, thus and the region will be able to be created.
+In our algorithm, we track the regions an execution state is in. Whenever an execution path leaves a region $R$, it pauses and waits for other states in $R$ to leave $R$. Then, it tries to merge with other states paused at the same point before continuing.
+
+%A problem that arises is that \emph{return} are similar to \emph{goto} statements. A \emph{return} statement forces an execution state to point straight toward the end of the program. Hence, what could have been a region, has another 'exit' and does not fufil the 'one-entry-one-exit' rule. As a result, no merging will be done. This problem is common as many real-world programs uses switch-case statements with \emph{return} statements inside. To curb this problem, we harmlessly tweak the \emph{return} statements, such that each return statement has a fake infinite loop such that they will not point to the end of the program. This infinite loop is put after the return statement, hence will never be executed, but the tree will change such that there will not be an additional exit, thus and the region will be able to be created.
+
+\paragraph{When to merge?}
+We discovered experimentally that if we always merge execution states whenever possible, Klee takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging.
 
 \subsection{Simplify}
 The first part of our simplifier uses a principle that we developed ourselves:
-Imagine a tree $A\cap(B\cup A)$. If the first A were \emph{False}, the entire tree will simplify to \emph{False}, immediately. Hence, the $A$ in the tree cannot be False. As a result, we can substitute the 2nd $A$ with \emph{True}, without loss of generality. The tree will then simplify to $A\cap(B\cup \text{True})$ which simplifies to $A$.
+Consider an expression $E = A\cap(B\cup A)$. We consider cases: if $A$ were false, then E will be false regardless of the value of $(B\cup A)$. If $A$ were true, we can replaces occurences of $A$ in the RHS with true. Thus we can always replace occurences of $A$ in the RHS with true. The tree will then simplify to $A\cap(B\cup \text{True}) = A$. By duality, in $A\cup(B\cup A)$ we can replace occurances of $A$ in $(B\cup A)$ by false.
 
-In Klee, constraints of an execution path are constructed by terms and binary operators. The simplifier algorithm can utilizes this principle, as the constraints are made of binary operators. As the simplifier travels down a tree, it records which terms it has seen and then substitutes the reappearing terms as it goes down the tree.
-
-In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification.
-
-The expression is also memoized in the beginning, and the simplifier algorithm will be run repeatedly until the expression does not change.
+In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification. The simplifier algorithm will be repeatedly run until the expression does not change.
 
 \section{Implementation}\label{implementation}
 In this section we describe the results.
@@ -119,9 +123,10 @@ In this section we describe the results.
 \section{Conclusions}\label{conclusions}
 We see that in programs with nested loops and switch statements in loops, the merge algorithm helps Klee to take much less time to finish debugging the program.
 
-We also have to consider to extend the merge algorithm to cater to the messy goto() statements, which disallows regions from being created.
+Implications: Rather than just an algorithm for Klee, our algorithm itself is a good method for programs that 
 
-\subsection{deficiency}
+We also should consider to extend the merge algorithm to cater to the messy goto() statements which, as mentioned in \S\ref{algorithm}, disallows regions from being created. 
+
 
 %\bibliographystyle{abbrv}
 %\bibliography{main}
