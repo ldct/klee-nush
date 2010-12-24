@@ -1098,7 +1098,7 @@ void Executor::stepInstruction(ExecutionState &state) {
   }
 
   if (statsTracker) {
-    statsTracker->stepInstruction(state);
+    //statsTracker->stepInstruction(state);
   }
 
   ++stats::instructions;
@@ -2474,7 +2474,7 @@ void Executor::run(ExecutionState &initialState) {
            it = states.begin(), ie = states.end();
          it != ie; ++it) {
       ExecutionState &state = **it;
-      stepInstruction(state); // keep stats rolling
+      //stepInstruction(state); // keep stats rolling
       terminateStateEarly(state, "execution halting");
     }
     updateStates(0);

@@ -43,10 +43,12 @@ long atol(register const char *nptr)
                 minus = 1;
                 nptr++;
         }
+        klee_merge();
         while (isdigit(*nptr)) {
                 total *= 10;
                 total += (*nptr++ - '0');
         }
+        klee_merge();
         return minus ? -total : total;
 }
 
@@ -57,9 +59,11 @@ find_value (char *start, long int length)
     {
       if (isdigit (*start))
         return atol (start);
+      klee_merge();
       length--;
       start++;
     }
+  klee_merge();
   return 0l;
 }
 
@@ -113,6 +117,7 @@ main ()
         return 1;
       else
         return -1;
+      klee_merge();
     }
   if (keyfield->numeric)
     {
@@ -138,11 +143,12 @@ main ()
             c1 = 0;
           else
             c1 = *p1++;
+          klee_merge();
           if (p2 == e2)
             c2 = 0;
           else
             c2 = *p2++;
-
+          klee_merge();
           if (char_order[c1] != char_order[c2])
             return char_order[c1] - char_order[c2];
           if (!c1)
@@ -160,11 +166,12 @@ main ()
             c1 = 0;
           else
             c1 = *p1++;
+          klee_merge();
           if (p2 == e2)
             c2 = 0;
           else
             c2 = *p2++;
-
+          klee_merge();
           if (c1 != c2)
             /* Reverse sign here so upper case comes out last.  */
             return c2 - c1;

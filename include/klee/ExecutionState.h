@@ -153,7 +153,7 @@ public:
 
   ref<Expr> simplify(ref<Expr> e);
   ref<Expr> simplifier(ref<Expr> e, std::set< std::pair<ref<Expr>,bool> > pairs);
-  bool merge(const ExecutionState &b);
+  int merge(const ExecutionState &b);
   void dumpStack(std::ostream &out) const;
   void showStack(std::ostream &out);
 };

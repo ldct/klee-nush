@@ -1,11 +1,14 @@
 #include "klee/klee.h"
 
+#define N 6
+
 int main() {
   
-  char arg_buf[4];
+  char arg_buf[N];
   unsigned char buffer_buf[100];
 
   klee_make_symbolic(arg_buf, sizeof(arg_buf), "arg");
+  arg_buf[N-1] = '\0';
 
   char *arg = arg_buf;
   unsigned char *buffer = buffer_buf;
@@ -37,5 +40,6 @@ int main() {
                 arg++;          /* Skip ']' */
         } else
                 *buffer++ = *arg++;
+        klee_merge();
   }
 }

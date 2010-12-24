@@ -156,15 +156,15 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
   os << "}";
   return os;
 }
-
-bool ExecutionState::merge(const ExecutionState &b) {
+//-1: pseudomerge instead
+int ExecutionState::merge(const ExecutionState &b) {
 
   //std::cerr << "OHAI\n";
   if (DebugLogStateMerge)
     std::cerr << "-- attempting merge of A:" 
                << this << " with B:" << &b << "--\n";
   if (pc != b.pc)
-    return false;
+    return 0;
   //return false;
 #if 0
   //quick hack to get user input
@@ -188,12 +188,12 @@ bool ExecutionState::merge(const ExecutionState &b) {
     while (itA!=stack.end() && itB!=b.stack.end()) {
       // XXX vaargs?
       if (itA->caller!=itB->caller || itA->kf!=itB->kf)
-        return false;
+        return 0;
       ++itA;
       ++itB;
     }
     if (itA!=stack.end() || itB!=b.stack.end())
-      return false;
+      return 0;
   }
 
   std::set< ref<Expr> > aConstraints(constraints.begin(), constraints.end());
@@ -256,7 +256,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
           std::cerr << "\t\tA misses binding for: " << bi->first->id << "\n";
         }
       }
-      return false;
+      return 0;
     }
     if (ai->second != bi->second) {
       if (DebugLogStateMerge)
@@ -264,19 +264,35 @@ bool ExecutionState::merge(const ExecutionState &b) {
       mutated.insert(ai->first);
     }
   }
+  //std::cerr << "msize = " << mutated.size() << "\n";
+  if (mutated.size())
+    return -1;
   if (ai!=ae || bi!=be) {
     if (DebugLogStateMerge)
       std::cerr << "\t\tmappings differ\n";
-    return false;
+    return 0;
   }
   
   // merge stack
+  int aSize = aSuffix.size();
+  int bSize = bSuffix.size();
+  int cSize = commonConstraints.size();
   
 /*  std::cerr << "merging common=" << commonConstraints.size()
             << "inA=" << aSuffix.size()
-            << "inB=" << bSuffix.size()
-            << "\n";
-*/
+            << "inB=" << bSuffix.size();
+*/ 
+  if (aSize + bSize > 20) {
+    if (cSize == 0) {
+      //std::cerr << "rejected!\n";
+      return -1;
+    }
+    if (aSize / cSize > 2 || bSize / cSize > 2) {
+      //std::cerr << "rejected!\n";
+      return -1;
+    }
+  }
+  //std::cerr << "ok!\n";
 
   ref<Expr> inA = ConstantExpr::alloc(1, Expr::Bool);
   ref<Expr> inB = ConstantExpr::alloc(1, Expr::Bool);
@@ -331,7 +347,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     constraints.addConstraint(*it);
   constraints.addConstraint(OrExpr::create(inA, inB));
 
-  return true;
+  return 1;
 }
 
 void ExecutionState::dumpStack(std::ostream &out) const {
