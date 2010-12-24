@@ -1,4 +1,4 @@
-\documentclass[12pt,twocolumn,a4paper]{article}
+\documentclass[12pt,a4paper]{article}
 
 %% Bibliography style:
 \usepackage{graphicx}
@@ -42,36 +42,69 @@ In our work, we extend a state-of-the-art symbolic execution engine, Klee, devel
 The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while \S\ref{implementation} describes our implementation. Our results are described in \S\ref{evaluation}. Finally, \S\ref{conclusions} gives the conclusions.
 
 \section{Overview}\label{overview}
-Klee has a poewrful tool. However, when Klee enters a loop, especially one with if-statements and switch-statements, the number of execution paths multiplies as for each new if-statement or switch-statement, more constraints are added. Hence there are many similar execution paths that can be merged, but all seperately processed, taking up more time than necessary.
-
-In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major methods: simplifying and merging. The simplifying function takes the multiple constraints from the different execution paths and, using some set theory, simplifies them into something smaller that is easier for the merge function to handle. The merge function itself uses a mix of several libraries with its own algorithm to determine when and where is suitable to merge such that the process will be without loss of completeness.
-
-In the merge function, we use a method of regions. Lines of executions are first grouped into \emph{Basic Blocks}. A tree is created that shows the flow of the function. We then group the basic blocks into \emph{Regions}. The algorithm of creating regions single rule: Each region has only one entry and one exit. As such, there may be regions within regions, but that makes our work easier. 
-
-INSERT IMAGE HERE?
-
-\section{Algorithm}\label{algorithm}
-\subsection{Simplify}
-In this section we describe the methods.
-Our code is written in C++.
+Here is an example of a test program we used, Berkeley Packet Filter (or bpf for short), to illustrate how Klee and our merging algorithm works.
 
 \begin{verbatim}
-\begin{lol}
+1. int bpf_validate(struct bpf_insn *f, int len)
+2. {
+3.      int i;
+4.      int from;
+5.      struct bpf_insn *p;
+6.      if (len < 1 || len > BPF_MAXINSNS)
+7.         return 0;
+8.      for (i = 0; i < len; ++i) {
+9.         p = &f[i];
+10.        switch (BPF_CLASS(p->code)) {
+11.        case BPF_LD:
+12.        case BPF_LDX:
+13.            switch (BPF_MODE(p->code)) {
+14.            case BPF_IMM:
+15.            ...
+16.            }
+17.        break;
+18.        case BPF_ST:
+19.        ...
+20.        }
+21.	}
+22.	return BPF_CLASS(f[len - 1].code) == BPF_RET;
+23. }
+24. #define N 10 
+25. int main(int argc, char *argv[]){  
+26.
+27.  struct bpf_insn ins_buffer[N];
+28.
+29.  klee_make_symbolic(ins_buffer, N * sizeof(ins_buffer[0]), "lol");
+30.  return bpf_validate(ins_buffer, N);
+31.}
 \end{verbatim}
 
-The first part of our simplifier uses a principle that we developed ourselves:
-Imagine a tree $A\cap(B\cup A)$. If the first A were \emph{False}, the entire tree will simplify to \emph{False}, immediately. Hence, the $A$ in the tree cannot be False. As a result, we can substitute the 2nd $A$ with \emph{True}, without loss of generality. The tree will then simplify to $A\cap(B\cup A)$ which simplifies to $A$. Thorough checking will get the same result.
+Klee, with our algorithm, runs as follows:
+\begin{enumerate}
+\item Klee makes the variable ins\_buffer symbolic in ln29. 
+\item In line 6, the first fork occurs. After executing line 7, Klee will now have 2 execution states with different constraints, so that it can carry on the possible states that may lead to a bug somewhere else in the program. Our algorithm will attempt to merge these two paths and the new constraints as they do not differ much, but without losing any information.
+\item In line 8, the for-loop creates a fork. Each time the for-loop is run, there will be a new fork, creating new execution states. 
+\item At line 10, the switch-statement creates as many forks as the number of cases. This can multiply with the number of forks created by the for-loop.
+\item Also in line 13, the switch-statement within the switch-statement of line 10 will create more branches. The problem caused by too much branching like this causes the statements in line 19 to be tested many more times than usual, as there are many different path conditions to test. Hence, we try to merge the branches in line16 to stop the problem.
+\item At the end of the switch statement, at line 20, our algorithm will attempt to merge all the branches created by the for-loop, since their route of execution does not differ, and as it will reduce the number of execution paths into one, fixing the problem of multiple execution states caused by the combination of line 8 and line 10.
+\end{enumerate}
 
-In Klee, constraints of an execution path are constructed by terms and binary operators. The simplifier algorithm utilizes this principle. As the constraints are made of binary operators, we can do this. As the simplifier travels down a tree, it memorizes which terms it has seen (binaries) and then substitutes the memorized binaries as it goes down the tree.
-
-In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification. This is where the function will turn two branching execution state into a single execution state. These two instructions will then be recursed down a constraint tree.
-
-The expression is also memoized in the beginning, and the simplifier algorithm will be run repeatedly until the expression does not change.
+\section{Algorithm}\label{algorithm}
+In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major operations: simplifying and merging. The simplifying function takes the multiple constraints from the different execution paths and, using some set theory, simplifies them into something smaller that is easier for the merge function to handle. The merge function itself uses a mix of several libraries with its own algorithm to determine when and where is suitable to merge such that the process will be without loss of completeness.
 
 \subsection{Merge}
-The merging algorithm utilizes \emph{Regions}. For every region, whenever an execution path leaves a region, it waits for whatever execution in that region to end, before it merges all the execution states and continues. This way, we will not have execution paths running all over the place, which takes more time to process.
+In the merge function, we use a method of \emph{Regions}. Lines of executions are first grouped into \emph{Basic Blocks}. A tree is created that shows the flow of the function. We then group the basic blocks into \emph{Regions}. The algorithm of creating regions single rule: Each region has only one entry and one exit. As such, there may be regions within regions, as it should. In our algorithm, whenever an execution path leaves a region, it waits for whatever execution in that region to end, before merging all the execution states and continues. This way, we will not have execution paths running all over the place, which takes more time to process.
 
 A problem that arises is that \emph{return} are similar to \emph{goto} statements. A \emph{return} statement forces an execution state to point straight toward the end of the program. Hence, what could have been a region, has another 'exit' and does not fufil the 'one-entry-one-exit' rule. As a result, no merging will be done. This problem is common as many real-world programs uses switch-case statements with \emph{return} statements inside. To curb this problem, we automatically tweak the \emph{return} statements, such that each return statement has a fake infinite loop such that they will not point to the end of the program. This infinite loop is put after the return statement, hence will never be executed, but the tree will change such that there will not be an additional exit, thus and the region will be able to be created.
+
+\subsection{Simplify}
+The first part of our simplifier uses a principle that we developed ourselves:
+Imagine a tree $A\cap(B\cup A)$. If the first A were \emph{False}, the entire tree will simplify to \emph{False}, immediately. Hence, the $A$ in the tree cannot be False. As a result, we can substitute the 2nd $A$ with \emph{True}, without loss of generality. The tree will then simplify to $A\cap(B\cup \text{True})$ which simplifies to $A$.
+
+In Klee, constraints of an execution path are constructed by terms and binary operators. The simplifier algorithm can utilizes this principle, as the constraints are made of binary operators. As the simplifier travels down a tree, it records which terms it has seen and then substitutes the reappearing terms as it goes down the tree.
+
+In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification.
+
+The expression is also memoized in the beginning, and the simplifier algorithm will be run repeatedly until the expression does not change.
 
 \section{Implementation}\label{implementation}
 In this section we describe the results.
@@ -84,7 +117,11 @@ In this section we describe the results.
 In this section we describe the results.
 
 \section{Conclusions}\label{conclusions}
-We worked hard, and achieved very little.
+We see that in programs with nested loops and switch statements in loops, the merge algorithm helps Klee to take much less time to finish debugging the program.
+
+We also have to consider to extend the merge algorithm to cater to the messy goto() statements, which disallows regions from being created.
+
+\subsection{deficiency}
 
 %\bibliographystyle{abbrv}
 %\bibliography{main}
