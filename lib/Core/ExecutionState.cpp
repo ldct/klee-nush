@@ -265,7 +265,7 @@ int ExecutionState::merge(const ExecutionState &b) {
     }
   }
   //std::cerr << "msize = " << mutated.size() << "\n";
-  if (mutated.size())
+  if (mutated.size() > 10)
     return -1;
   if (ai!=ae || bi!=be) {
     if (DebugLogStateMerge)
@@ -281,19 +281,19 @@ int ExecutionState::merge(const ExecutionState &b) {
 /*  std::cerr << "merging common=" << commonConstraints.size()
             << "inA=" << aSuffix.size()
             << "inB=" << bSuffix.size();
-*/ 
+ 
   if (aSize + bSize > 20) {
     if (cSize == 0) {
       //std::cerr << "rejected!\n";
       return -1;
     }
-    if (aSize / cSize > 2 || bSize / cSize > 2) {
+    if (aSize / cSize > 5 || bSize / cSize > 5) {
       //std::cerr << "rejected!\n";
       return -1;
     }
   }
   //std::cerr << "ok!\n";
-
+*/
   ref<Expr> inA = ConstantExpr::alloc(1, Expr::Bool);
   ref<Expr> inB = ConstantExpr::alloc(1, Expr::Bool);
   for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 

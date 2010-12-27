@@ -531,9 +531,10 @@ ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &po
 //    }
     else if (mergeOK == 0 || mergeOK == -1) {
       //std::cerr << "merge failed unexpectedly.\n";
+      baseSearcher->addState(es);
+      assert(pausedStates.find(es) != pausedStates.end());
       continue;
     }
-    baseSearcher->removeState(es);
   }
   return target;
   //only target will be added back from baseSearcher. the pseudoMergedChildren won't.
