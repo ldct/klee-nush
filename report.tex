@@ -3,6 +3,7 @@
 %% Bibliography style:
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{array}
 
 \usepackage[a4paper,margin=1in]{geometry}
 
@@ -113,9 +114,16 @@ In the second part of the simplifier algorithm, we use simple theorems for simpl
 \section{Implementation}\label{implementation}
 In this section we describe the results.
 
-
-
-
+\begin{center}
+\setlength{\extrarowheight}{2ex}
+%\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{*{3}{| m{3cm} }|}
+\hline
+bpf & expand.c & stuff\\ \hline
+Timeb4 & timeafter & stuff\\ \hline
+timeb4 & timeafter &  stuff\\ \hline
+\end{tabular}
+\end{center}
 
 \section{Evaluation}\label{evaluation}
 In this section we describe the results.
