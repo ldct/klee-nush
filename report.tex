@@ -2,7 +2,7 @@
 \documentclass[12pt,a4paper]{article}
 
 %% Bibliography style:
-\usepackage{graphicx}
+\usepackage[pdftex]{graphicx}
 \usepackage{amsmath}
 \usepackage{array}
 
@@ -26,6 +26,10 @@ Kuan Xiang Wen$^{1}$, Li Xuan Ji$^{1}$, Tan Jiaqi$^{2}$\\
 \small{$^{2}$INFO Division, DSO National Laboratories, Singapore}
 }
 
+\newcommand{\klee}{\textsc{klee}}
+\newcommand{\leek}{\textsc{leek}}
+
+
 \begin{document}
 \maketitle
 \begin{abstract}
@@ -37,7 +41,7 @@ Testing is very important. We spend a lot of money on it. Unfortunately, the onl
 
 Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we mark the input to the program as symbolic, ie, it can be anything, and we execute the program code on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths. 
 
-In our work, we extend a state-of-the-art symbolic execution engine, \textsc{klee}, developed at Stanford Univeristy. \textsc{klee} is written in C++ and runs on LLVM bitcode. It is good.
+In our work, we extend a state-of-the-art symbolic execution engine, \klee, developed at Stanford Univeristy. \klee is written in C++ and runs on LLVM bitcode. It is good.
 
 \paragraph{Outline}
 
@@ -75,7 +79,7 @@ Here is an example of a test program we used, Berkeley Packet Filter (or bpf for
 26.
 27.  struct bpf_insn ins_buffer[N];
 28.
-29.  \textsc{klee}_make_symbolic(ins_buffer, N * sizeof(ins_buffer[0]), "lol");
+29.  klee_make_symbolic(ins_buffer, N * sizeof(ins_buffer[0]), "lol");
 30.  return bpf_validate(ins_buffer, N);
 31.}
 \end{verbatim}
@@ -89,12 +93,18 @@ Here is an example of a test program we used, Berkeley Packet Filter (or bpf for
 \item When all execution states reach line 20, our algorithm will merge all of them, since their constraints do not differ much.
 \end{enumerate}
 
-This means that if a single execution state enters the loop body, all the execution states created by branching from it will merge back with it at the end of the switch statement, so no net additional execution states are created. In contrast, \textsc{klee} creates $N-1$ new execution states and does not merge them back. This means \textsc{klee} will create $N^\text{len} - 1$ execution states and will have exponential complexity, while our algorithm has linear complexity.
+This means that if a single execution state enters the loop body, all the execution states created by branching from it will merge back with it at the end of the switch statement, so no net additional execution states are created. In contrast, \klee creates $N-1$ new execution states and does not merge them back. This means \klee will create $N^\text{len} - 1$ execution states and will have exponential complexity, while our algorithm has linear complexity.
 
 The main challenge our algorithm solves is determining when an execution state must pause. If an execution state is executed past the merge point (at line 20) then a chance to merge is missed.
 
 \section{Algorithm}\label{algorithm}
 In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major operations: simplifying and merging. The simplifying function takes the multiple constraints from the different execution paths and, using some set theory, simplifies them into something smaller that is easier for the merge function to handle. The merge function itself uses a mix of several libraries with its own algorithm to determine when and where is suitable to merge such that the process will be without loss of completeness.
+
+\begin{figure}[h!]
+  \centering
+    \includegraphics[width=\textwidth]{reg.png}
+  \caption{Region information for bpf\_validate overlaid on the CFG. Each box is a \emph{basic block}; those in the same region are grouped by colour.}
+\end{figure}
 
 \subsection{Merge}
 Internally, LLVM bitcode consists of \textbf{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
@@ -104,7 +114,7 @@ In our algorithm, we track the regions an execution state is in. Whenever an exe
 %A problem that arises is that \emph{return} are similar to \emph{goto} statements. A \emph{return} statement forces an execution state to point straight toward the end of the program. Hence, what could have been a region, has another 'exit' and does not fufil the 'one-entry-one-exit' rule. As a result, no merging will be done. This problem is common as many real-world programs uses switch-case statements with \emph{return} statements inside. To curb this problem, we harmlessly tweak the \emph{return} statements, such that each return statement has a fake infinite loop such that they will not point to the end of the program. This infinite loop is put after the return statement, hence will never be executed, but the tree will change such that there will not be an additional exit, thus and the region will be able to be created.
 
 \paragraph{When to merge?}
-We discovered experimentally that if we always merge execution states whenever possible, \textsc{klee} takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging.
+We discovered experimentally that if we always merge execution states whenever possible, \klee takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging.
 
 \subsection{Simplify}
 The first part of our simplifier uses a principle that we developed ourselves:
@@ -116,14 +126,14 @@ In the second part of the simplifier algorithm, we use simple theorems for simpl
 In this section we describe the results.
 
 \section{Evaluation}\label{evaluation}
-In this section we describe the results.
+We evaluated \textsc{leek} by selecting 12 benchmarks that were used in the literature before \cite{boom} \cite{boom}.
 
 \begin{center}
 \setlength{\extrarowheight}{2ex}
 \begin{tabular}{|m{5.5cm} *{4}{| m{1.7cm} }|}
 \hline
 Name & LOC & Size & \multicolumn{2}{p{3.4cm}|}{Time Taken}\\ \cline{4-5}
- & & & \multicolumn{1}{p{1.7cm}|}{\textsc{klee}} & \multicolumn{1}{p{1.7cm}|}{\textsc{leek}}\\ \hline
+ & & & \multicolumn{1}{p{1.7cm}|}{\klee} & \multicolumn{1}{p{1.7cm}|}{\leek}\\ \hline
 netbsd/glob2 & 40 & 50 & 1.842 & 0.586\\ \hline
 apache/get\_tag & 10 & 100 & 66.164 & 62.467\\ \hline
 apache/escape\_absolute\_uri & 10 & 100 & 66.164 & 62.467\\ \hline
@@ -140,19 +150,19 @@ chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
 \end{tabular}
 \end{center}
 
-\section{Conclusions}\label{conclusions}
-We see that in programs with nested loops and switch statements in loops, the merge algorithm helps \textsc{klee} to take much less time to finish debugging the program.
+Furthermore, we performed two other small experiments. Firstly, we measuerd time taken to analyze a program as a function on the number of bytes made symbolic for both \klee \ and \leek. 
 
-Implications: Rather than just an algorithm for \textsc{klee}, our algorithm itself is a good method for programs that 
+\section{Conclusions}\label{conclusions}
+We see that in programs with nested loops and switch statements in loops, the merge algorithm helps \klee to take much less time to finish debugging the program.
+
+Implications: Rather than just an algorithm for \klee, our algorithm itself is a good method for programs that 
 
 We also should consider to extend the merge algorithm to cater to the messy goto() statements which, as mentioned in \S\ref{algorithm}, disallows regions from being created. \cite{lamport94}
 
-
-
-This too \cite{boom}. \textsc{klee} is good.
+This too \cite{boom}. \klee is good.
 
 \section{Appendix}
-\textsc{klee}: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs
+\klee: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs
 
 %\bibliographystyle{plain}
 %\bibliography{ref}
