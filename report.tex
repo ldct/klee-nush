@@ -115,19 +115,30 @@ In the second part of the simplifier algorithm, we use simple theorems for simpl
 \section{Implementation}\label{implementation}
 In this section we describe the results.
 
-\begin{center}
-\setlength{\extrarowheight}{2ex}
-\begin{tabular}{*{5}{| m{2.7cm} }|}
-\hline
-Name & LOC & Size & \multicolumn{2}{p{5.4cm}|}{Time Taken}\\ \cline{4-5}
- & & & \multicolumn{1}{p{2.7cm}|}{\textsc{klee}} & \multicolumn{1}{p{2.7cm}|}{\textsc{leek}}\\ \hline
-stuff & stuff & stuff & stuff & stuff\\ \hline
-stuff & stuff & stuff & stuff & stuff\\ \hline
-\end{tabular}
-\end{center}
-
 \section{Evaluation}\label{evaluation}
 In this section we describe the results.
+
+\begin{center}
+\setlength{\extrarowheight}{2ex}
+\begin{tabular}{|m{5.5cm} *{4}{| m{1.7cm} }|}
+\hline
+Name & LOC & Size & \multicolumn{2}{p{3.4cm}|}{Time Taken}\\ \cline{4-5}
+ & & & \multicolumn{1}{p{1.7cm}|}{\textsc{klee}} & \multicolumn{1}{p{1.7cm}|}{\textsc{leek}}\\ \hline
+netbsd/glob2 & 40 & 50 & 1.842 & 0.586\\ \hline
+apache/get\_tag & 10 & 100 & 66.164 & 62.467\\ \hline
+apache/escape\_absolute\_uri & 10 & 100 & 66.164 & 62.467\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+
+\end{tabular}
+\end{center}
 
 \section{Conclusions}\label{conclusions}
 We see that in programs with nested loops and switch statements in loops, the merge algorithm helps \textsc{klee} to take much less time to finish debugging the program.
