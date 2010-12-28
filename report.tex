@@ -1,3 +1,4 @@
+\listfiles
 \documentclass[12pt,a4paper]{article}
 
 %% Bibliography style:
@@ -8,9 +9,9 @@
 \usepackage[a4paper,margin=1in]{geometry}
 
 %% Natbib is a popular style for formatting references.
-\usepackage{natbib}
+%\usepackage[numbers]{natbib}
 %% bibpunct sets the punctuation used for formatting citations.
-\bibpunct{(}{)}{;}{a}{,}{,}
+%\bibpunct{(}{)}{;}{a}{,}{,}
 
 \setlength{\parskip}{1.5ex plus 0.5ex minus 0.2ex}
 \linespread{0}
@@ -19,10 +20,10 @@
 \date{}
 
 \author{
-Kuan Xiang Wen$^{1}$, Li Xuan Ji$^{1}$, Tan Jia Qi$^{2}$\\
+Kuan Xiang Wen$^{1}$, Li Xuan Ji$^{1}$, Tan Jiaqi$^{2}$\\
 \vspace{1 mm} \\
 \small{$^{1}$NUS High School of Math and Science}\\
-\small{$^{2}$DSO National Laboratories CSL Division}
+\small{$^{2}$INFO Division, DSO National Laboratories, Singapore}
 }
 
 \begin{document}
@@ -36,7 +37,7 @@ Testing is very important. We spend a lot of money on it. Unfortunately, the onl
 
 Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we mark the input to the program as symbolic, ie, it can be anything, and we execute the program code on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths. 
 
-In our work, we extend a state-of-the-art symbolic execution engine, \textbf{Klee}, developed at Stanford Univeristy. Klee is written in C++ and runs on llvm bitcode. It is good.
+In our work, we extend a state-of-the-art symbolic execution engine, \textsc{klee}, developed at Stanford Univeristy. \textsc{klee} is written in C++ and runs on LLVM bitcode. It is good.
 
 \paragraph{Outline}
 
@@ -74,7 +75,7 @@ Here is an example of a test program we used, Berkeley Packet Filter (or bpf for
 26.
 27.  struct bpf_insn ins_buffer[N];
 28.
-29.  klee_make_symbolic(ins_buffer, N * sizeof(ins_buffer[0]), "lol");
+29.  \textsc{klee}_make_symbolic(ins_buffer, N * sizeof(ins_buffer[0]), "lol");
 30.  return bpf_validate(ins_buffer, N);
 31.}
 \end{verbatim}
@@ -88,7 +89,7 @@ Here is an example of a test program we used, Berkeley Packet Filter (or bpf for
 \item When all execution states reach line 20, our algorithm will merge all of them, since their constraints do not differ much.
 \end{enumerate}
 
-This means that if a single execution state enters the loop body, all the execution states created by branching from it will merge back with it at the end of the switch statement, so no net additional execution states are created. In contrast, Klee creates $N-1$ new execution states and does not merge them back. This means klee will create $N^\text{len} - 1$ execution states and will have exponential complexity, while our algorithm has linear complexity.
+This means that if a single execution state enters the loop body, all the execution states created by branching from it will merge back with it at the end of the switch statement, so no net additional execution states are created. In contrast, \textsc{klee} creates $N-1$ new execution states and does not merge them back. This means \textsc{klee} will create $N^\text{len} - 1$ execution states and will have exponential complexity, while our algorithm has linear complexity.
 
 The main challenge our algorithm solves is determining when an execution state must pause. If an execution state is executed past the merge point (at line 20) then a chance to merge is missed.
 
@@ -96,14 +97,14 @@ The main challenge our algorithm solves is determining when an execution state m
 In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major operations: simplifying and merging. The simplifying function takes the multiple constraints from the different execution paths and, using some set theory, simplifies them into something smaller that is easier for the merge function to handle. The merge function itself uses a mix of several libraries with its own algorithm to determine when and where is suitable to merge such that the process will be without loss of completeness.
 
 \subsection{Merge}
-Internally, llvm bitcode consists of \textbf{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
+Internally, LLVM bitcode consists of \textbf{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
 
 In our algorithm, we track the regions an execution state is in. Whenever an execution path leaves a region $R$, it pauses and waits for other states in $R$ to leave $R$. Then, it tries to merge with other states paused at the same point before continuing.
 
 %A problem that arises is that \emph{return} are similar to \emph{goto} statements. A \emph{return} statement forces an execution state to point straight toward the end of the program. Hence, what could have been a region, has another 'exit' and does not fufil the 'one-entry-one-exit' rule. As a result, no merging will be done. This problem is common as many real-world programs uses switch-case statements with \emph{return} statements inside. To curb this problem, we harmlessly tweak the \emph{return} statements, such that each return statement has a fake infinite loop such that they will not point to the end of the program. This infinite loop is put after the return statement, hence will never be executed, but the tree will change such that there will not be an additional exit, thus and the region will be able to be created.
 
 \paragraph{When to merge?}
-We discovered experimentally that if we always merge execution states whenever possible, Klee takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging.
+We discovered experimentally that if we always merge execution states whenever possible, \textsc{klee} takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging.
 
 \subsection{Simplify}
 The first part of our simplifier uses a principle that we developed ourselves:
@@ -116,12 +117,12 @@ In this section we describe the results.
 
 \begin{center}
 \setlength{\extrarowheight}{2ex}
-%\renewcommand{\arraystretch}{1.5}
-\begin{tabular}{*{3}{| m{3cm} }|}
+\begin{tabular}{*{5}{| m{2.7cm} }|}
 \hline
-bpf & expand.c & stuff\\ \hline
-Timeb4 & timeafter & stuff\\ \hline
-timeb4 & timeafter &  stuff\\ \hline
+Name & LOC & Size & \multicolumn{2}{p{5.4cm}|}{Time Taken}\\ \cline{4-5}
+ & & & \multicolumn{1}{p{2.7cm}|}{\textsc{klee}} & \multicolumn{1}{p{2.7cm}|}{\textsc{leek}}\\ \hline
+stuff & stuff & stuff & stuff & stuff\\ \hline
+stuff & stuff & stuff & stuff & stuff\\ \hline
 \end{tabular}
 \end{center}
 
@@ -129,21 +130,37 @@ timeb4 & timeafter &  stuff\\ \hline
 In this section we describe the results.
 
 \section{Conclusions}\label{conclusions}
-We see that in programs with nested loops and switch statements in loops, the merge algorithm helps Klee to take much less time to finish debugging the program.
+We see that in programs with nested loops and switch statements in loops, the merge algorithm helps \textsc{klee} to take much less time to finish debugging the program.
 
-Implications: Rather than just an algorithm for Klee, our algorithm itself is a good method for programs that 
+Implications: Rather than just an algorithm for \textsc{klee}, our algorithm itself is a good method for programs that 
 
-We also should consider to extend the merge algorithm to cater to the messy goto() statements which, as mentioned in \S\ref{algorithm}, disallows regions from being created. 
-
-
-%\bibliographystyle{abbrv}
-%\bibliography{main}
+We also should consider to extend the merge algorithm to cater to the messy goto() statements which, as mentioned in \S\ref{algorithm}, disallows regions from being created. \cite{lamport94}
 
 
 
-
+This too \cite{boom}. \textsc{klee} is good.
 
 \section{Appendix}
+\textsc{klee}: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs
+
+%\bibliographystyle{plain}
+%\bibliography{ref}
+EXE: Automatically Generating Inputs of Death - www.stanford.edu/~engler/exe-ccs-06.pdf
+
+\begin{thebibliography}{9}
+
+\bibitem{lamport94}
+         Leslie Lamport,
+          \emph{\LaTeX: A Document Preparation System}.
+	  Addison Wesley, Massachusetts,
+	  2nd Edition,
+	  1994.
+
+\bibitem{boom}
+         HIM
+         \emph{\textsc{klee}: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs}
+         Stanford
+\end{thebibliography}
 
 
 
