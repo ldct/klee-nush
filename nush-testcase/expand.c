@@ -1,6 +1,6 @@
 #include "klee/klee.h"
 
-#define N 6
+#define N 5
 
 int main() {
   

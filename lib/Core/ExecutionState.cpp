@@ -267,7 +267,7 @@ int ExecutionState::merge(const ExecutionState &b) {
 
   //std::cerr << "msize = " << mutated.size() << "\n";
   //return -1;
-  if (mutated.size() > 2) {
+  if (mutated.size() > 1) {
     //std::cerr << "mutated size rejected\n";
     return 0;
   }
@@ -294,7 +294,7 @@ int ExecutionState::merge(const ExecutionState &b) {
       //std::cerr << "rejected!\n";
       return -1;
     }
-    if (aSize / cSize > 2 || bSize / cSize > 2) {
+    if (aSize / cSize > 1 || bSize / cSize > 1) {
       //std::cerr << "rejected!\n";
       return -1;
     }
