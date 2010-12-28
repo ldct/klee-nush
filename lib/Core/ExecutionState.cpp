@@ -267,7 +267,7 @@ int ExecutionState::merge(const ExecutionState &b) {
 
   //std::cerr << "msize = " << mutated.size() << "\n";
   //return -1;
-  if (mutated.size() > 1) {
+  if (mutated.size() > 2) {
     //std::cerr << "mutated size rejected\n";
     return 0;
   }
