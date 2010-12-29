@@ -37,6 +37,7 @@
 #include <fstream>
 #include <climits>
 #include <algorithm>
+#include <list>
 
 using namespace klee;
 using namespace llvm;
@@ -486,58 +487,42 @@ bool ExhaustiveMergingSearcher::canMerge(ExecutionState* pausedES)
 
 ExecutionState* ExhaustiveMergingSearcher::doMerge(std::set<ExecutionState*> &possibleMerges) 
 {
-  ExecutionState *target = *possibleMerges.begin();
-  std::set<ExecutionState*> allPossibleMerges; //possibleMerges U {es->childern | es in possibleMerges}
-
-  //std::cerr << "merging... possibleMerges = \n";
+  std::list<ExecutionState*> allPossibleMerges; //possibleMerges U {es->childern | es in possibleMerges}
 
   for (std::set<ExecutionState*>::iterator ei = possibleMerges.begin(), ee = possibleMerges.end(); ei != ee; ++ei) {
     ExecutionState *es = *ei;
-    //std::cerr << es ;
-
-    allPossibleMerges.insert(es);
-
-    if (es->hasPseudoMergedChildren()) {
-      std::set<ExecutionState*> esC = es->pseudoMergedChildren;
-      es->pseudoMergedChildren.clear();
-      allPossibleMerges.insert(esC.begin(), esC.end());
-      //std::cerr << ":";
-      for (std::set<ExecutionState*>::iterator esCi = esC.begin(), esCe = esC.end(); esCi != esCe; ++esCi) {
-        ExecutionState* esCes = *esCi;
-        //std::cerr << esCes << " ";
-      }
-    }
-    //std::cerr << "\n";
+    pausedStates.erase(es);
+    allPossibleMerges.push_back(es);
   }
-  //std::cerr << "\n";
-
-
-  for (std::set<ExecutionState*>::iterator ei = allPossibleMerges.begin(), ee = allPossibleMerges.end(); ei != ee; ++ei) {
+  
+  ExecutionState *target;
+  std::vector<ExecutionState*> toErase;
+  
+  //while (!allPossibleMerges.empty()) {
+  if (1) {
+  
+  target = allPossibleMerges.back();
+  for (std::list<ExecutionState*>::iterator ei = allPossibleMerges.begin(), ee = allPossibleMerges.end(); ei != ee; ++ei) {
     if (*ei == target)
       continue;
     ExecutionState *es = *ei;
-    //std::cerr << es << "\n";
 
     int mergeOK = target->merge(*es);
     if (mergeOK == 1) {
-      //std::cerr << "merge ok! \n";
-      //std::cerr << "terminate " << es << "\n";
-      //TODO: let baseSearcher know about it first
+      allPossibleMerges.erase(ei);
+      ei--;
       executor.terminateState(*es);
     }
-//    else if (mergeOK == -1) {
-      //std::cerr << "will now pseudomerge into" << target << "\n"; 
-      //target->pseudoMergedChildren.insert(es);
-//    }
     else if (mergeOK == 0 || mergeOK == -1) {
-      //std::cerr << "merge failed unexpectedly.\n";
-      baseSearcher->addState(es);
-      assert(pausedStates.find(es) != pausedStates.end());
       continue;
     }
   }
-  return target;
-  //only target will be added back from baseSearcher. the pseudoMergedChildren won't.
+  baseSearcher->addState(target);
+
+  allPossibleMerges.pop_back();
+
+  }
+  return 0;
 }
 
 void ExhaustiveMergingSearcher::cleanPausedStates() {
@@ -563,13 +548,7 @@ void ExhaustiveMergingSearcher::cleanPausedStates() {
   }
   for (std::map<std::pair<llvm::Function*, llvm::BasicBlock*>, std::set<ExecutionState*> >::iterator i = esCanMergeAt.begin(), e = esCanMergeAt.end(); i != e; ++i) {
     //std::cerr << "\t" << i->first.first->getNameStr() << "::" << i->first.second->getNameStr() << ":" << i->second.size() << "\n";
-    ExecutionState* target = doMerge(i->second);
-    for (std::set<ExecutionState*>::iterator p = i->second.begin(), pe = i->second.end(); p != pe; ++p) {
-      ExecutionState* pausedE = *p;
-      assert(pausedStates.find(pausedE) != pausedStates.end());
-      pausedStates.erase(pausedE);
-    }
-    baseSearcher->addState(target);
+    doMerge(i->second);
   }
   
   

@@ -159,28 +159,11 @@ std::ostream &klee::operator<<(std::ostream &os, const MemoryMap &mm) {
 //-1: pseudomerge instead
 int ExecutionState::merge(const ExecutionState &b) {
 
-  //std::cerr << "OHAI\n";
   if (DebugLogStateMerge)
     std::cerr << "-- attempting merge of A:" 
                << this << " with B:" << &b << "--\n";
   if (pc != b.pc)
     return 0;
-  //return false;
-#if 0
-  //quick hack to get user input
-  int ans;
-  std::cout << "type 42 to fail merge\n";
-  std::cin >> ans;
-  if (ans == 42) {
-    std::cerr << "failing merge..\n";
-    return false;
-  }
-  else {
-    std::cerr << "ok, ill try to merge..\n";
-  }
-  
-#endif
-  // XXX
   assert(symbolics==b.symbolics && "Symbolics differ!");
   {
     std::vector<StackFrame>::const_iterator itA = stack.begin();
