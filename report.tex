@@ -134,18 +134,12 @@ We evaluated \textsc{leek} by selecting 12 benchmarks that were used in the lite
 \hline
 Name & LOC & Size & \multicolumn{2}{p{3.4cm}|}{Time Taken}\\ \cline{4-5}
  & & & \multicolumn{1}{p{1.7cm}|}{\klee} & \multicolumn{1}{p{1.7cm}|}{\leek}\\ \hline
-netbsd/glob2 & 40 & 50 & 1.842 & 0.586\\ \hline
-apache/get\_tag & 10 & 100 & 66.164 & 62.467\\ \hline
-apache/escape\_absolute\_uri & 10 & 100 & 66.164 & 62.467\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
-chuck/norris & 42 & 42 & 42.42 & 42.424\\ \hline
+netbsd/glob2 & 42 & 40 & 1.842 & 0.586\\ \hline
+apache/get\_tag & 42 & 10 & 66.164 & 62.467\\ \hline
+%apache/escape\_absolute\_uri & 42 & 10 & 66.164 & 62.467\\ \hline
+bpf/bpf\_validate & 42 & 100 & 254.625 & 6.258\\ \hline
+mult\cite{boom} & 42 & 1 & 7.264 & 0.111\\ \hline
+edbrowse/ftpls & 42 & 32 & 91.369 & 13.937\\ \hline
 
 \end{tabular}
 \end{center}

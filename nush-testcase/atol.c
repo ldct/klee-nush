@@ -32,7 +32,7 @@ int isspace(int c)
   return _pctype[c] & _SPACE;
 }
 
-#define N 12
+#define N 5
 
 main()
 {
