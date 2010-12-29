@@ -26,8 +26,8 @@ Kuan Xiang Wen$^{1}$, Li Xuan Ji$^{1}$, Tan Jiaqi$^{2}$\\
 \small{$^{2}$INFO Division, DSO National Laboratories, Singapore}
 }
 
-\newcommand{\klee}{\textsc{klee}}
-\newcommand{\leek}{\textsc{leek}}
+\newcommand{\klee}{\textsc{klee }}
+\newcommand{\leek}{\textsc{leek }}
 
 
 \begin{document}
@@ -37,11 +37,11 @@ Automatic test generation is the problem of generating test cases in a given pro
 \end{abstract}
 
 \section{Introduction}
-Testing is very important. We spend a lot of money on it. Unfortunately, the only widely used methods to generate test cases are a) manually writing them and b) generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
+Today, testing is our first line of defence against software errors. Unfortunately, the only widely used methods to generate test cases are a) manually writing them and b) generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
 
-Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we mark the input to the program as symbolic, ie, it can be anything, and we execute the program code on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths. 
+Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we create an \emph{execution state} (which represent constraints on sets of actual program runs), mark the input as symbolic, ie, it can be anything, and execute the program on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths.
 
-In our work, we extend a state-of-the-art symbolic execution engine, \klee, developed at Stanford Univeristy. \klee is written in C++ and runs on LLVM bitcode. It is good.
+This method however falls short on programs that iterates a lot and with many repeated \emph{if} statements, which leads to too many execution states to be reasonable. Hence in our work, we extend a state-of-the-art symbolic execution engine \klee which is developed at Stanford Univeristy to handle this problem. \klee is written in C++ and runs on LLVM bitcode.
 
 \paragraph{Outline}
 
@@ -98,7 +98,7 @@ This means that if a single execution state enters the loop body, all the execut
 The main challenge our algorithm solves is determining when an execution state must pause. If an execution state is executed past the merge point (at line 20) then a chance to merge is missed.
 
 \section{Algorithm}\label{algorithm}
-In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major operations: simplifying and merging. The simplifying function takes the multiple constraints from the different execution paths and, using some set theory, simplifies them into something smaller that is easier for the merge function to handle. The merge function itself uses a mix of several libraries with its own algorithm to determine when and where is suitable to merge such that the process will be without loss of completeness.
+In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major operations: simplifying and merging.
 
 \begin{figure}[h!]
   \centering
@@ -109,12 +109,15 @@ In order to minimize the number of execution paths, we aim to merge the similar 
 \subsection{Merge}
 Internally, LLVM bitcode consists of \textbf{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
 
-In our algorithm, we track the regions an execution state is in. Whenever an execution path leaves a region $R$, it pauses and waits for other states in $R$ to leave $R$. Then, it tries to merge with other states paused at the same point before continuing.
+In our algorithm, we track the regions an execution state is in. Whenever an execution path leaves a region $R$, it pauses and waits for other states in $R$ to leave $R$. Then, it tries to merge with other states paused at the same point before continuing. Our algorithm has the following advantages;
 
-%A problem that arises is that \emph{return} are similar to \emph{goto} statements. A \emph{return} statement forces an execution state to point straight toward the end of the program. Hence, what could have been a region, has another 'exit' and does not fufil the 'one-entry-one-exit' rule. As a result, no merging will be done. This problem is common as many real-world programs uses switch-case statements with \emph{return} statements inside. To curb this problem, we harmlessly tweak the \emph{return} statements, such that each return statement has a fake infinite loop such that they will not point to the end of the program. This infinite loop is put after the return statement, hence will never be executed, but the tree will change such that there will not be an additional exit, thus and the region will be able to be created.
+Any merging algorithms will crucially rely on pausing execution states at some point, because otherwise a state will be executed too far past the merge point and a chance to merge will be missed. A flawed algorithm might end up in a deadlock situation where the paused state never gets unpaused. However this cannot happen to ours (we prove this in the appendix)
 
-\paragraph{When to merge?}
-We discovered experimentally that if we always merge execution states whenever possible, \klee takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging.
+
+\subsection{When to merge?}
+We discovered experimentally that if we always merge execution states whenever possible, \klee takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging. Hence, we only merge two execution states if they are similar enough. We use two metrics for similarity: the number of memory addresses two states differ by as well as the number of constraints they have in common. We experiment with varying the threshold for these metrics in \S\ref{evaluation}.
+
+While we may not want to merge two states at a certain merge point, we may wish to merge them at a later point. Our algorithm will automatically ensure that when one of two states that did not merge at a certain merge point reach another merge point, it waits for the other state to attempt to merge again.
 
 \subsection{Simplify}
 The first part of our simplifier uses a principle that we developed ourselves:
@@ -126,13 +129,13 @@ In the second part of the simplifier algorithm, we use simple theorems for simpl
 In this section we describe the results.
 
 \section{Evaluation}\label{evaluation}
-We evaluated \textsc{leek} by selecting 12 benchmarks that were used in the literature before \cite{boom} \cite{boom}.
+We evaluated \leek by selecting 12 benchmarks that were used in the literature before \cite{boom}.
 
 \begin{center}
 \setlength{\extrarowheight}{2ex}
 \begin{tabular}{|m{5.5cm} *{4}{| m{1.7cm} }|}
 \hline
-Name & LOC & Size & \multicolumn{2}{p{3.4cm}|}{Time Taken}\\ \cline{4-5}
+Name & LOC & Size(bits) & \multicolumn{2}{p{3.4cm}|}{Time Taken(s)}\\ \cline{4-5}
  & & & \multicolumn{1}{p{1.7cm}|}{\klee} & \multicolumn{1}{p{1.7cm}|}{\leek}\\ \hline
 netbsd/glob2 & 42 & 40 & 1.842 & 0.586\\ \hline
 apache/get\_tag & 42 & 10 & 66.164 & 62.467\\ \hline
@@ -144,23 +147,24 @@ edbrowse/ftpls & 42 & 32 & 91.369 & 13.937\\ \hline
 \end{tabular}
 \end{center}
 
-Furthermore, we performed two other small experiments. Firstly, we measuerd time taken to analyze a program as a function on the number of bytes made symbolic for both \klee \ and \leek. 
+Furthermore, we performed two other small experiments. Firstly, we measured time taken to analyze a program as a function on the number of bytes made symbolic for both \klee and \leek.
 
-\section{Conclusions}\label{conclusions}
 We see that in programs with nested loops and switch statements in loops, the merge algorithm helps \klee to take much less time to finish debugging the program.
 
-Implications: Rather than just an algorithm for \klee, our algorithm itself is a good method for programs that 
+\section{Conclusions}\label{conclusions}
+We should first explain that our algorithm and many others are created to replicate the logical processes in the human mind. If a human would analyze BPF, he would be able to tell where redundancies occur and process only the relevant lines of code. This pattern recognition system and logical reasoning of the brain is what our code aims to attain.
 
-We also should consider to extend the merge algorithm to cater to the messy goto() statements which, as mentioned in \S\ref{algorithm}, disallows regions from being created. \cite{lamport94}
+As such, rather than just an algorithm for \klee we have demonstrated logical reasoning within the processes that goes into merging that, as of now, is not well developed. Merging has the potential to be used in any analysis programs that may tackle recursion or iteration that are commonly seen in programming. In other words, other algorithms can be designed around the ideas that originally created our algorithm.
+
+Our algorithm can still be greatly improved with algorithms that are built on more sophisticated logical grounds. For example our pseudomerge algorithm cannot compare to the human instinct, which takes little computation and is fast to determine which execution states are similar.
+
+We also should consider to extend the merge algorithm to cater to the messy \emph{goto} statements which disallows regions from being created. 
+
+\cite{lamport94}
 
 This too \cite{boom}. \klee is good.
 
 \section{Appendix}
-\klee: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs
-
-%\bibliographystyle{plain}
-%\bibliography{ref}
-EXE: Automatically Generating Inputs of Death - www.stanford.edu/~engler/exe-ccs-06.pdf
 
 \begin{thebibliography}{9}
 
@@ -172,8 +176,7 @@ EXE: Automatically Generating Inputs of Death - www.stanford.edu/~engler/exe-ccs
 	  1994.
 
 \bibitem{boom}
-         HIM
-         \emph{\textsc{klee}: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs}
+         \emph{KLEE: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs}
          Stanford
 \end{thebibliography}
 
