@@ -98,9 +98,8 @@ This means that if a single execution state enters the loop body, all the execut
 The main challenge our algorithm solves is determining when an execution state must pause. If an execution state is executed past the merge point (at line 20) then a chance to merge is missed.
 
 \section{Algorithm}\label{algorithm}
-In order to minimize the number of execution paths, we aim to merge the similar execution paths. We have primarily 2 major operations: simplifying and merging.
-
-\begin{figure}[h!]
+We describe two parts of our algorithm: deciding when to merge and simplifying constraints after merging. In our experience both were crucial to getting good results.
+\begin{figure}
   \centering
     \includegraphics[width=\textwidth]{reg.png}
   \caption{Region information for bpf\_validate overlaid on the CFG. Each box is a \emph{basic block}; those in the same region are grouped by colour.}
@@ -121,21 +120,19 @@ While we may not want to merge two states at a certain merge point, we may wish 
 
 \subsection{Simplify}
 The first part of our simplifier uses a principle that we developed ourselves:
-Consider an expression $E = A\cap(B\cup A)$. We consider cases: if $A$ were false, then E will be false regardless of the value of $(B\cup A)$. If $A$ were true, we can replaces occurences of $A$ in the RHS with true. Thus we can always replace occurences of $A$ in the RHS with true. The tree will then simplify to $A\cap(B\cup \text{True}) = A$. By duality, in $A\cup(B\cup A)$ we can replace occurances of $A$ in $(B\cup A)$ by false.
+Consider an expression $E = A\cap(B\cup A)$. We consider cases: if $A$ were false, then E will be false regardless of the value of $(B\cup A)$. If $A$ were true, we can replaces occurences of $A$ in the RHS $(B\cup A)$ with true. Thus we can always replace occurences of $A$ in the RHS with true. The tree will then simplify to $A\cap(B\cup \text{True}) = A$. By duality, in $A\cup(B\cup A)$ we can replace occurances of $A$ in $(B\cup A)$ by false.
 
-In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification. The simplifier algorithm will be repeatedly run until the expression does not change.
+In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification. The simplifier algorithm will be repeatedly run until the expression does not change. This algorithm is fast and well-suited for the constraints produced by merging (with many AND's and OR's) that \klee did not simplify.
 
 \section{Implementation}\label{implementation}
 In this section we describe the results.
 
 \section{Evaluation}\label{evaluation}
-We evaluated \leek by selecting 12 benchmarks that were used in the literature before \cite{boom}.
-
-\begin{center}
 \setlength{\extrarowheight}{2ex}
-\begin{tabular}{|m{5.5cm} *{4}{| m{1.7cm} }|}
+\begin{table}
+\begin{tabular}{|m{5.5cm} *{4}{| m{1.9cm} }|}
 \hline
-Name & LOC & Size(bits) & \multicolumn{2}{p{3.4cm}|}{Time Taken(s)}\\ \cline{4-5}
+Name & LOC & Size(bytes) & \multicolumn{2}{p{3.4cm}|}{Time Taken(s)}\\ \cline{4-5}
  & & & \multicolumn{1}{p{1.7cm}|}{\klee} & \multicolumn{1}{p{1.7cm}|}{\leek}\\ \hline
 netbsd/glob2 & 42 & 40 & 1.842 & 0.586\\ \hline
 apache/get\_tag & 42 & 10 & 66.164 & 62.467\\ \hline
@@ -145,11 +142,22 @@ mult\cite{boom} & 42 & 1 & 7.264 & 0.111\\ \hline
 edbrowse/ftpls & 42 & 32 & 91.369 & 13.937\\ \hline
 
 \end{tabular}
-\end{center}
+\caption{Time taken for \klee and \leek for various programs. 'Name' identifies the program as well as function we tested. 'LOC' is the lines of code as reported by sloccount. 'Size' is the size of the symbolic input.}
+\label{tab:mainresult}
+\end{table}
 
-Furthermore, we performed two other small experiments. Firstly, we measured time taken to analyze a program as a function on the number of bytes made symbolic for both \klee and \leek.
+We evaluated \leek by selecting 12 benchmarks that were used in the literature before \cite{boom}. We then ran both \leek and \klee on them, recording the time it took for both to symbolically execute each program. The results are presented in Table \ref{tab:mainresult}. \leek performs better than \klee on 24 out of 42 of these programs. Over all the programs, the median improvement is 42\%. 
 
-We see that in programs with nested loops and switch statements in loops, the merge algorithm helps \klee to take much less time to finish debugging the program.
+Upon examining our results, we program structures that greatly affected the improvement. Select statements were highly amenable to merging as differenc cases are are ofter handled similarly. Another area is loops; \klee spends most of its time analyzing loops because they spawn many execution states. Such loops typically advance a loop counter (an integer or pointer) and do so either once per iteration or multiple times per iteration. When the counter is advanced once per iteration, the execution states spawned in one iteration can easily be merged because the loop counter is the same; however this is not true if the amount of advancement is loop-dependent.
+
+While our algorithm has such a limitation, advancing the counter a variable number of times leads to more dangerous code, as we could more easily go out of bounds. Even so we believe there is nothing fundamentally very different about these two types of loops and future work is aimed at speeding up analysis of such loops.
+
+Furthermore, we performed two other small experiments. Firstly, we measured time taken to analyze a program as a function on the number of bytes made symbolic for both \klee and \leek to test the hypothesis that \leek can reduce the asymptotic time needed to symbolically execute certain programs. We chose bpf\_validate for this. Clearly, \klee takes exponential time while \leek does not.
+
+We also explored varying the parameters for 42.
+
+\section{Related work}\label{related}
+There is plenty of related work.
 
 \section{Conclusions}\label{conclusions}
 We should first explain that our algorithm and many others are created to replicate the logical processes in the human mind. If a human would analyze BPF, he would be able to tell where redundancies occur and process only the relevant lines of code. This pattern recognition system and logical reasoning of the brain is what our code aims to attain.
@@ -165,6 +173,22 @@ We also should consider to extend the merge algorithm to cater to the messy \emp
 This too \cite{boom}. \klee is good.
 
 \section{Appendix}
+
+\subsection{Correctness}
+
+We prove here that our algorithm is sound and complete with respect to the base \klee system. Roughly, soundness means that all reported errors are acutal errors and completeness means that all errors are reported. We show that for a given program $P$, \leek will report an error for a certain input $I$ iif \klee reports an error for $I$. Note that our system is only sound and complete with respect to \klee; \leek is only sound and complete when klee is too. For instance, \klee does not support symbolic floating point; thus if it does not catch a certain input neither will \leek.
+
+As \klee operates, it generates (by branching) and destroys (by terminating) execution states; \leek additionally merges execution states. The key invariant $T$ that always holds on the execution states is this: $T$ means that every concrete execution of $P$ satisfies the constraints of exactly one execution state, including states that are active and states that have been terminated, and every execution state is reachable by some concrete execution of $P$.
+
+How does this invariant imply soundness and completeness of \leek if \klee is sound and complete? Since the input $I$ will satisfy one execution state, when all the states terminate, there must exist some terminated state which $I$ satisfies; we can then rely on the completeness of \klee to ensure that that state will generate an error report. Also if a state generates an error report, we know by the second part of the invariant there is some input that satisfies the state and hence by the soundness of klee that it is an input that generates unwanted behaviour.
+
+This invariant clearly holds at the start, when \emph{all} executions satisfy the only execution state, which has no constraints. When forking execution states, say on a condition $c$, klee will fork execution like so: $\{E\} \rightarrow \{E_T, E_F\}$, replacing $E$ with $E_T$ and $E_F$, and if $E$ had constraints $C$, $E_T$ has constraints $C \wedge c$ and $E_F$ has constraints $C \wedge \neg c$. If $I$ satisfied $C$, the invariant still holds as $I$ satisfies exactly one of $E_T$ and $E_F$ (since $E_T \vee E_F$ = true and $E_F \wedge E_T$ = false). Terminating states also mantain the invariant as it merely changes a state from active to terminated.
+
+What merging does is this: $\{E_1, E_2\} \rightarrow \{E_m\}$, replacing $E_1$ and $E_2$ with $E_m$. If $E_1$ had constraints $C_1$ and $E_2$ had $C_2$, then $E_M$ has constraints $C_1 \vee C_2$. If $I$ satisfied one of $C_1$ or $C_2$, it satisfies $E_m$ as $C_1 \vee C_2$ is true when one of $C_1$ and $C_2$ is true. If it did not satisfy one of $C_1$ or $C_2$, it does not satisfy $C_1 \vee C_2$ as $F \vee F = F$.
+
+\subsection{Non-deadlock}
+
+\subsection{Optimality}
 
 \begin{thebibliography}{9}
 
