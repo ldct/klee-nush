@@ -134,27 +134,48 @@ In this section we describe the results.
 \hline
 Name & LOC & Size(bytes) & \multicolumn{2}{p{3.4cm}|}{Time Taken(s)}\\ \cline{4-5}
  & & & \multicolumn{1}{p{1.7cm}|}{\klee} & \multicolumn{1}{p{1.7cm}|}{\leek}\\ \hline
-netbsd/glob2 & 42 & 40 & 1.842 & 0.586\\ \hline
-apache/get\_tag & 42 & 10 & 66.164 & 62.467\\ \hline
-%apache/escape\_absolute\_uri & 42 & 10 & 66.164 & 62.467\\ \hline
-bpf/bpf\_validate & 42 & 100 & 254.625 & 6.258\\ \hline
-mult\cite{boom} & 42 & 1 & 7.264 & 0.111\\ \hline
-edbrowse/ftpls & 42 & 32 & 91.369 & 13.937\\ \hline
-
+bpf/bpf\_validate   &     42        &       100     &       254.625     &     6.258\\ \hline
+netbsd/glob2        &     42        &       40      &       1.842       &      0.586\\ \hline
+apache/get\_tag     &     42        &       10      &       66.164      &     62.467\\ \hline
+mult\cite{boom}     &     42        &       1       &       7.264       &     0.111\\ \hline
+atol                &     42        &       12      &       7.790       &     18.035\\ \hline
+edbrowse/ftpls      &     42        &       32      &       91.369      &     13.937\\ \hline
+tr/expand           &     42        &       5       &       42.555      &     51.749\\ \hline
 \end{tabular}
 \caption{Time taken for \klee and \leek for various programs. 'Name' identifies the program as well as function we tested. 'LOC' is the lines of code as reported by sloccount. 'Size' is the size of the symbolic input.}
 \label{tab:mainresult}
 \end{table}
 
-We evaluated \leek by selecting 12 benchmarks that were used in the literature before \cite{boom}. We then ran both \leek and \klee on them, recording the time it took for both to symbolically execute each program. The results are presented in Table \ref{tab:mainresult}. \leek performs better than \klee on 24 out of 42 of these programs. Over all the programs, the median improvement is 42\%. 
+We evaluated \leek by selecting 12 benchmarks that were used in the literature before \cite{boom}. We then ran both \leek and \klee on them, recording the time it took for both to symbolically execute each program. We used the same merging threshold for all of them. The results are presented in Table \ref{tab:mainresult}. \leek performs better than \klee on 24 out of 42 of these programs. Over all the programs, the median improvement is 42\%. Note that the results \emph{underestimate} the improvements that \leek provides as the merging threshold is not optimal for all of them; for instance \leek's runtime on ftpls can be further reduced to 0.186s with optimum settings.
 
 Upon examining our results, we program structures that greatly affected the improvement. Select statements were highly amenable to merging as differenc cases are are ofter handled similarly. Another area is loops; \klee spends most of its time analyzing loops because they spawn many execution states. Such loops typically advance a loop counter (an integer or pointer) and do so either once per iteration or multiple times per iteration. When the counter is advanced once per iteration, the execution states spawned in one iteration can easily be merged because the loop counter is the same; however this is not true if the amount of advancement is loop-dependent.
 
 While our algorithm has such a limitation, advancing the counter a variable number of times leads to more dangerous code, as we could more easily go out of bounds. Even so we believe there is nothing fundamentally very different about these two types of loops and future work is aimed at speeding up analysis of such loops.
 
-Furthermore, we performed two other small experiments. Firstly, we measured time taken to analyze a program as a function on the number of bytes made symbolic for both \klee and \leek to test the hypothesis that \leek can reduce the asymptotic time needed to symbolically execute certain programs. We chose bpf\_validate for this. Clearly, \klee takes exponential time while \leek does not.
 
-We also explored varying the parameters for 42.
+\begin{figure}
+  \hfill
+  \begin{minipage}[t]{.45\textwidth}
+    \begin{center}  
+      \includegraphics[width=\textwidth]{bpf_graph.png}
+      \caption{Time taken for analysis versus size of symbolic input. Note that the time taken is plotted on a log scale in order to compare the two lines.}
+      \label{bpfgraph}
+    \end{center}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{.45\textwidth}
+    \begin{center}  
+      \includegraphics[width=\textwidth]{threshold_graph.png}
+      \caption{Time taken for analysis versus merging threshold. The flat line is the time it takes for \klee to analyze the program.}
+      \label{threshgraph}
+    \end{center}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+Furthermore, we performed two other small experiments. Firstly, we measured time taken to analyze a program as a function on the number of bytes made symbolic for both \klee and \leek to test the hypothesis that \leek can reduce the asymptotic time needed to symbolically execute certain programs. We chose bpf\_validate for this. The results are shown in figure \ref{bpfgraph}. Clearly, \klee's execution time is super-exponential in the symbolic input size while \leek's is sub-exponential.
+
+We also explored varying the parameters for the merging threshold. We found that changing threshold based on the number of constraints had a much smaller effect compared to changing the threshold based on the number of memory addresses (variables) changed. Hence we only plot the later in figure \ref{threshgraph}. The optimum threshold is clearly 0, ie we only merge if \emph{no} memory addresses have changed.
 
 \section{Related work}\label{related}
 There is plenty of related work.
