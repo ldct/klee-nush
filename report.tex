@@ -45,7 +45,7 @@ This method however falls short on programs that iterates a lot and with many re
 
 \paragraph{Outline}
 
-The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while \S\ref{implementation} describes our implementation. Our results are described in \S\ref{evaluation}. Finally, \S\ref{conclusions} gives the conclusions.
+The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while \S\ref{implementation} describes our implementation. Our results are described in \S\ref{evaluation}. Related work is discussed in \S\ref{related}. Finally, \S\ref{conclusions} gives the conclusions.
 
 \section{Overview}\label{overview}
 Here is an example of a test program we used, Berkeley Packet Filter (or bpf for short), to illustrate our merging algorithm.
@@ -178,20 +178,20 @@ Furthermore, we performed two other small experiments. Firstly, we measured time
 We also explored varying the parameters for the merging threshold. We found that changing threshold based on the number of constraints had a much smaller effect compared to changing the threshold based on the number of memory addresses (variables) changed. Hence we only plot the later in figure \ref{threshgraph}. The optimum threshold is clearly 0, ie we only merge if \emph{no} memory addresses have changed.
 
 \section{Related work}\label{related}
-There is plenty of related work.
+For most Automatic State Generation static analytic programs, merging is not an uncommon idea for optimizing the run time of the debugging process. However they are generally incomplete\cite{klee}\cite{exe}. Hence merging itself is not well developed, remaining an attractive idea.
+
+There is also supportive work of Execution States\cite{loopsum} that helps \leek in its understanding.
 
 \section{Conclusions}\label{conclusions}
+We have successfully implemented an algorithm for the merging of states for the execution of \klee, which is initally not well-developed. Our results show a clear change of the time required to debug the program between \klee and \leek, which is from exponential to sub-exponential respectively. The median speed-up from the graphs ascertains this fact.
+
 We should first explain that our algorithm and many others are created to replicate the logical processes in the human mind. If a human would analyze BPF, he would be able to tell where redundancies occur and process only the relevant lines of code. This pattern recognition system and logical reasoning of the brain is what our code aims to attain.
 
-As such, rather than just an algorithm for \klee we have demonstrated logical reasoning within the processes that goes into merging that, as of now, is not well developed. Merging has the potential to be used in any analysis programs that may tackle recursion or iteration that are commonly seen in programming. In other words, other algorithms can be designed around the ideas that originally created our algorithm.
+As such, rather than just an algorithm for \klee we have demonstrated logical reasoning within the processes that goes into merging that, as of now, is not well developed. This reasoning within merging has the potential to be used in any analysis programs that may tackle recursion or iteration that are commonly seen in programming. In other words, other algorithms can be designed around the ideas that originally created our algorithm.
 
-Our algorithm can still be greatly improved with algorithms that are built on more sophisticated logical grounds. For example our pseudomerge algorithm cannot compare to the human instinct, which takes little computation and is fast to determine which execution states are similar.
+Our algorithm can still be greatly improved with algorithms that are built on more sophisticated logical grounds. For example our wait-and-merge algorithm as described in \S 3.2 cannot compare to the human instinct, which takes little computation and is fast to determine which execution states are similar.
 
 We also should consider to extend the merge algorithm to cater to the messy \emph{goto} statements which disallows regions from being created. 
-
-\cite{lamport94}
-
-This too \cite{boom}. \klee is good.
 
 \section{Appendix}
 
@@ -212,17 +212,31 @@ What merging does is this: $\{E_1, E_2\} \rightarrow \{E_m\}$, replacing $E_1$ a
 \subsection{Optimality}
 
 \begin{thebibliography}{9}
-
-\bibitem{lamport94}
-         Leslie Lamport,
-          \emph{\LaTeX: A Document Preparation System}.
-	  Addison Wesley, Massachusetts,
-	  2nd Edition,
-	  1994.
-
-\bibitem{boom}
+\bibitem{klee}
          \emph{KLEE: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs}
-         Stanford
+         D. Dunbar, C. Cadar, D. Engler
+         Stanford University
+         2008
+
+\bibitem{exe}
+          \emph{EXE: Automatically Generating Inputs of Death}
+	  C. Cadar, V. Ganesh, P.M. Pawlowski, D.L. Dill, D.R. Engler
+	  Stanford University
+	  2006
+
+         
+\bibitem{dart}
+          \emph{DART: Directed Automated Random Testing}
+          P. Godefroid, N. Klarlund, K. Sen
+	  Bell Labs
+	  June 2005
+	
+\bibitem{loopsum}
+        \emph{Loop Summarizationusing Abstract Transformers}
+        D. Kroening, N. Sharygina, S. Tonetta, A. Tsitovich, C. M. Wintersteiger
+        2007
+
+
 \end{thebibliography}
 
 
