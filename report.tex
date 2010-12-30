@@ -33,19 +33,19 @@ Kuan Xiang Wen$^{1}$, Li Xuan Ji$^{1}$, Tan Jiaqi$^{2}$\\
 \begin{document}
 \maketitle
 \begin{abstract}
-Automatic test generation is the problem of generating test cases in a given program for the purposes of vulnerability detection and program verification. One method of achieving this is Symbolic Execution, which executes the program with \emph{symbolic} variables to quickly test every possible execution path that the program may take. Often symbolic execution creates many execution paths that are similar; our project focuses on determining when these paths can be merged to cut down on repetitive operations. In addition, we have developed a pseudomerging algorithm to avoid situations where the merging algorithm performes worse. We prove our algorithm's correctness and optimality and demonstrate its practical usefulness by generating test cases for real world programs. We observe speed up from exponential to linear time for certain programs.
+Automatic test generation is the problem of generating test cases in a given program for the purposes of vulnerability detection and program verification. One method of achieving this is Symbolic Execution, which executes the program with \emph{symbolic} variables to quickly test every possible execution path that the program may take. Often symbolic execution creates many execution paths that are similar; our project focuses on determining when these paths can be merged to cut down on repetitive operations. In addition, we have developed a pseudomerging algorithm to avoid situations where the merging algorithm performes worse. We prove our algorithm's correctness and demonstrate its practical usefulness by generating test cases for real world programs. We observe speed up from exponential to linear time for certain programs.
 \end{abstract}
 
 \section{Introduction}
-Today, testing is our first line of defence against software errors. Unfortunately, the only widely used methods to generate test cases are a) manually writing them and b) generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
+Today, testing is our first line of defence against software errors. Unfortunately, the only widely used methods to generate test cases are manually writing them and generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
 
 Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we create an \emph{execution state} (which represent constraints on sets of actual program runs), mark the input as symbolic, ie, it can be anything, and execute the program on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths.
 
-This method however falls short on programs that iterates a lot and with many repeated \emph{if} statements, which leads to too many execution states to be reasonable. Hence in our work, we extend a state-of-the-art symbolic execution engine \klee which is developed at Stanford Univeristy to handle this problem. \klee is written in C++ and runs on LLVM bitcode.
+This method however falls short on programs that iterates a lot and with many repeated \emph{if} statements, which leads to too many execution states to be reasonable. Hence in our work, we extend a state-of-the-art symbolic execution engine \klee \cite{klee} which is developed at Stanford Univeristy to handle this problem. \klee is written in C++ and runs on LLVM bitcode. We call our extension \leek.
 
 \paragraph{Outline}
 
-The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while \S\ref{implementation} describes our implementation. Our results are described in \S\ref{evaluation}. Related work is discussed in \S\ref{related}. Finally, \S\ref{conclusions} gives the conclusions.
+The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while our results are described in \S\ref{evaluation}. Related work is discussed in \S\ref{related}. Finally, \S\ref{conclusions} gives the conclusions.
 
 \section{Overview}\label{overview}
 Here is an example of a test program we used, Berkeley Packet Filter (or bpf for short), to illustrate our merging algorithm.
@@ -106,12 +106,11 @@ We describe two parts of our algorithm: deciding when to merge and simplifying c
 \end{figure}
 
 \subsection{Merge}
-Internally, LLVM bitcode consists of \textbf{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
+Internally, LLVM bitcode consists of \emph{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region \cite{regions} is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
 
 In our algorithm, we track the regions an execution state is in. Whenever an execution path leaves a region $R$, it pauses and waits for other states in $R$ to leave $R$. Then, it tries to merge with other states paused at the same point before continuing. Our algorithm has the following advantages;
 
-Any merging algorithms will crucially rely on pausing execution states at some point, because otherwise a state will be executed too far past the merge point and a chance to merge will be missed. A flawed algorithm might end up in a deadlock situation where the paused state never gets unpaused. However this cannot happen to ours (we prove this in the appendix)
-
+Any merging algorithms will crucially rely on pausing execution states at some point, because otherwise a state will be executed too far past the merge point and a chance to merge will be missed. A flawed algorithm might end up in a deadlock situation where the paused state never gets unpaused. However this cannot happen to ours as we only paused when there are some states in the region we left.
 
 \subsection{When to merge?}
 We discovered experimentally that if we always merge execution states whenever possible, \klee takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging. Hence, we only merge two execution states if they are similar enough. We use two metrics for similarity: the number of memory addresses two states differ by as well as the number of constraints they have in common. We experiment with varying the threshold for these metrics in \S\ref{evaluation}.
@@ -124,9 +123,6 @@ Consider an expression $E = A\cap(B\cup A)$. We consider cases: if $A$ were fals
 
 In the second part of the simplifier algorithm, we use simple theorems for simplification (eg. $A\cup \text{True} = \text{True}$) to complete the simplification. The simplifier algorithm will be repeatedly run until the expression does not change. This algorithm is fast and well-suited for the constraints produced by merging (with many AND's and OR's) that \klee did not simplify.
 
-\section{Implementation}\label{implementation}
-In this section we describe the results.
-
 \section{Evaluation}\label{evaluation}
 \setlength{\extrarowheight}{2ex}
 \begin{table}
@@ -134,19 +130,19 @@ In this section we describe the results.
 \hline
 Name & LOC & Size(bytes) & \multicolumn{2}{p{3.4cm}|}{Time Taken(s)}\\ \cline{4-5}
  & & & \multicolumn{1}{p{1.7cm}|}{\klee} & \multicolumn{1}{p{1.7cm}|}{\leek}\\ \hline
-bpf/bpf\_validate   &     42        &       100     &       254.625     &     6.258\\ \hline
-netbsd/glob2        &     42        &       40      &       1.842       &      0.586\\ \hline
-apache/get\_tag     &     42        &       10      &       66.164      &     62.467\\ \hline
-mult\cite{boom}     &     42        &       1       &       7.264       &     0.111\\ \hline
-atol                &     42        &       12      &       7.790       &     18.035\\ \hline
-edbrowse/ftpls      &     42        &       32      &       91.369      &     13.937\\ \hline
-tr/expand           &     42        &       5       &       42.555      &     51.749\\ \hline
+bpf/bpf\_validate   &     154       &       100     &       254.625     &     6.258\\ \hline
+netbsd/glob2        &     55        &       40      &       1.842       &      0.586\\ \hline
+apache/get\_tag     &     114       &       10      &       66.164      &     62.467\\ \hline
+mult\cite{statejoin}&     16        &       1       &       7.264       &     0.111\\ \hline
+atol                &     50        &       12      &       7.790       &     18.035\\ \hline
+edbrowse/ftpls      &     87        &       32      &       91.369      &     13.937\\ \hline
+tr/expand           &     38        &       5       &       42.555      &     51.749\\ \hline
 \end{tabular}
-\caption{Time taken for \klee and \leek for various programs. 'Name' identifies the program as well as function we tested. 'LOC' is the lines of code as reported by sloccount. 'Size' is the size of the symbolic input.}
+\caption{Time taken for \klee and \leek for various programs. 'Name' identifies the program as well as function we tested. 'LOC' is the lines of code as reported by David A. Wheeler's 'SLOCCount'. 'Size' is the size of the symbolic input.}
 \label{tab:mainresult}
 \end{table}
 
-We evaluated \leek by selecting 12 benchmarks that were used in the literature before \cite{boom}. We then ran both \leek and \klee on them, recording the time it took for both to symbolically execute each program. We used the same merging threshold for all of them. The results are presented in Table \ref{tab:mainresult}. \leek performs better than \klee on 24 out of 42 of these programs. Over all the programs, the median improvement is 42\%. Note that the results \emph{underestimate} the improvements that \leek provides as the merging threshold is not optimal for all of them; for instance \leek's runtime on ftpls can be further reduced to 0.186s with optimum settings.
+We evaluated \leek by selecting 7 benchmarks that were used in the literature before \cite{statejoin}\cite{zitser}\cite{klee}. We then ran both \leek and \klee on them, recording the time it took for both to symbolically execute each program. We used the same merging threshold for all of them. The results are presented in Table \ref{tab:mainresult}. \leek performs better than \klee on 5 out of 7 of these programs. Over all the programs, the mean improvement is 1687\% and the median improvement is 314\%. Note that the results \emph{underestimate} the improvements that \leek provides as the merging threshold is not optimal for all of them; for instance \leek's runtime on ftpls can be further reduced to 0.186s with optimum settings.
 
 Upon examining our results, we program structures that greatly affected the improvement. Select statements were highly amenable to merging as differenc cases are are ofter handled similarly. Another area is loops; \klee spends most of its time analyzing loops because they spawn many execution states. Such loops typically advance a loop counter (an integer or pointer) and do so either once per iteration or multiple times per iteration. When the counter is advanced once per iteration, the execution states spawned in one iteration can easily be merged because the loop counter is the same; however this is not true if the amount of advancement is loop-dependent.
 
@@ -178,9 +174,15 @@ Furthermore, we performed two other small experiments. Firstly, we measured time
 We also explored varying the parameters for the merging threshold. We found that changing threshold based on the number of constraints had a much smaller effect compared to changing the threshold based on the number of memory addresses (variables) changed. Hence we only plot the later in figure \ref{threshgraph}. The optimum threshold is clearly 0, ie we only merge if \emph{no} memory addresses have changed.
 
 \section{Related work}\label{related}
-For most Automatic State Generation static analytic programs, merging is not an uncommon idea for optimizing the run time of the debugging process. However they are generally incomplete\cite{klee}\cite{exe}. Hence merging itself is not well developed, remaining an attractive idea.
+There have been two main approaches to the problem of program verification: static analysis \cite{MC} and dynamic analysis. Static analysis checks the program without running it, ie, only by looking at the source code. Such analysis often suffers from high false positives due to the fact that they are not precise enough; in particular most of them are path-insensitive. This means that they could potentially report an error that will occur on some execution path through a program even if that path is not feasible. Adding path sensitivity to static analysis is inappropriate as they are designed to be lightweight analyses and checking the feasibility of paths would require some sort of heavyweight decision procedures.
 
-There is also supportive work of Execution States\cite{loopsum} that helps \leek in its understanding.
+Dynamic analysis, on the other hand, monitors programs as they are run and report only errors that actually occur; thus they never report false positives. An example that is commonly used is Valgrind \cite{valgrind}, a framework that automatically reports memory management bugs (such as reading / writing out of bounds) and concurrency bugs (such as race conditions or deadlocks). However these tools only report errors that occur in given concrete runs; thus, someone has to supply test cases to them.
+
+Symbolic analysis combines the advantages of both approaches; it only needs the source code of a program to work and it also never reports false positives. Furthermore, it is much more scalable and less labour-intensive than formal verification methods like model checking and theorem proving. Symbolic analysis was first proposed in 1976 \cite{old}, but practical symbolic execution tools have only emerged recently \cite{klee}\cite{dart}. This is because only recently do we have powerful decision procedures \cite{bitvecarray} for properties we care about, programs that can decide, for instance, if a certain execution path is feasible. Although the problem is NP-hard (all the decision procedures use a SAT solver, and 3-SAT is the canonical NP-hard problem) in general, heuristics for decision procedures have been proven to be fast enough; for instance, fast heuristic algorithms for linear integer constraints that can accurately model the modular arithmetic used by computers exist.
+
+Symbolic analysis suffers from the path explosion problem, the problem that even though the number of feasible paths through a program is much less than the number of inputs, it is still too large. Most research has gone into using better heuristics to explore the search space; for instance, \klee proritizes execution states that will explore more code, while AEG \cite{aeg} aims to explore only those states that are likely to lead to buffer overflows (mainly, the symbolic input is as long as possible). Other approaches are pruning redundant states \cite{rwset}, which can be viewed as a special case of merging, as well as performing analysis compositionally by re-using function summaries \cite{cdtg}. \cite{loopsum} explores modeling linear constraints on loop iterations. CUTE \cite{cute} investigates \emph{concolic execution}, where concrete runs are used to guide the symbolic execution.
+
+State merging has previously been explored by Hansen et. al. \cite{statejoin} for symbolically executing binaries. However, we believe that an analysis such as this is much better suited to targeting a higher-level language such as LLVM bitcode as calculating the control flow structure of programs without the source code is not easy; one needs to use a disassembler and even then, the whole CFG may not be calculated. Also, Hansen et. al. did not show that state merging could be used on real-life examples and not just toy programs, wheares we have.
 
 \section{Conclusions}\label{conclusions}
 We have successfully implemented an algorithm for the merging of states for the execution of \klee, which is initally not well-developed. Our results show a clear change of the time required to debug the program between \klee and \leek, which is from exponential to sub-exponential respectively. The median speed-up from the graphs ascertains this fact.
@@ -207,35 +209,96 @@ This invariant clearly holds at the start, when \emph{all} executions satisfy th
 
 What merging does is this: $\{E_1, E_2\} \rightarrow \{E_m\}$, replacing $E_1$ and $E_2$ with $E_m$. If $E_1$ had constraints $C_1$ and $E_2$ had $C_2$, then $E_M$ has constraints $C_1 \vee C_2$. If $I$ satisfied one of $C_1$ or $C_2$, it satisfies $E_m$ as $C_1 \vee C_2$ is true when one of $C_1$ and $C_2$ is true. If it did not satisfy one of $C_1$ or $C_2$, it does not satisfy $C_1 \vee C_2$ as $F \vee F = F$.
 
-\subsection{Non-deadlock}
-
-\subsection{Optimality}
-
 \begin{thebibliography}{9}
+\bibitem{old}
+         J. C. King.
+         Symbolic execution and program testing.
+         In \emph{Communications of the ACM, 1976}.
+
 \bibitem{klee}
-         \emph{KLEE: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs}
-         D. Dunbar, C. Cadar, D. Engler
-         Stanford University
-         2008
+         D. Dunbar, C. Cadar, D. Engler. 
+         KLEE: Unassisted and Automatic Generation of High-Coverage Tests for Complex Systems Programs.
+         In \emph{Operating Systems Development and Implementation (OSDI 2008)}
 
 \bibitem{exe}
-          \emph{EXE: Automatically Generating Inputs of Death}
-	  C. Cadar, V. Ganesh, P.M. Pawlowski, D.L. Dill, D.R. Engler
-	  Stanford University
-	  2006
-
+          C. Cadar, V. Ganesh, P.M. Pawlowski, D.L. Dill, D.R. Engler
+          EXE: Automatically Generating Inputs of Death.
+      	  In\emph{ Proceedings of the 13th ACM Conference on Computer and Communications Security (CCS 2007)}
          
 \bibitem{dart}
-          \emph{DART: Directed Automated Random Testing}
-          P. Godefroid, N. Klarlund, K. Sen
-	  Bell Labs
-	  June 2005
+          P. Godefroid, N. Klarlund, K. Sen. 
+          DART: Directed Automated Random Testing.
+          In\emph{ Proceedings of the 2005 ACM SIGPLAN conference on Programming language design and implementation (PLDI 2005)}
 	
 \bibitem{loopsum}
-        \emph{Loop Summarizationusing Abstract Transformers}
-        D. Kroening, N. Sharygina, S. Tonetta, A. Tsitovich, C. M. Wintersteiger
-        2007
+        D. Kroening, N. Sharygina, S. Tonetta, A. Tsitovich, C. M. Wintersteiger.
+        Loop Summarizationusing Abstract Transformers.
+        In\emph{ 6th International Symposium on Automated Technology for Verification and Analysis (ATVA 2008)}
 
+\bibitem{cdtg}
+        P. Godefroid.
+        Compositional Dynamic Test Generation.
+        In\emph{ Proceedings of the 34th annual ACM SIGPLAN-SIGACT symposium on Principles of programming languages (POPL 2007)}
+        
+\bibitem{regions}
+        R. Johnson, D. Pearson, K. Pingali.
+        The Program Structure Tree: Computing Control Regions in Linear Time.
+        In\emph{ Programming Languages Implementation and Design (PLDI 1994)}
+
+\bibitem{rwset}
+        P. Boonstoppel, C. Cadar, D. Engler.
+        RWset: attacking path explosion in constraint-based test generation.
+        In\emph{ International Conference on Tools and Algorithms for the Constructions and Analysis of Systems (TACAS 2008)}
+        
+\bibitem{bitvecarray}
+        V. Dill.
+        A decision procedure for bitvectors and arrays.
+        In\emph{ Computer Aided Verification, 2007}
+        
+\bibitem{statejoin}
+        T. Hansen, P. Schachte, H. Søndergaard.
+        State Joining and Splitting for the Symbolic Execution of Binaries.
+        In\emph{ Lecture Notes in Computer Science, 2009, Volume 5779/2009.}
+        
+\bibitem{valgrind}
+        N. Nethercote, J. Seward.
+        Valgrind: a framework for heavyweight dynamic binary instrumentation.
+        In\emph{ Proceedings of the 2007 ACM SIGPLAN conference on Programming language design and implementation (PLDI 2007)}
+        
+\bibitem{modelchecking}
+        E.M. Clarke.
+        Model Checking.
+        In\emph{ Foundations of Software Technology and Theoretical Computer Science, 1997}
+        
+\bibitem{aeg}
+        T. Avgerinos, S. K. Cha, B. Lim T. H. and D. Brumley.
+        AEG: Automatic Exploit Generation.
+        In\emph{ Network and Distributed System Security Symposium (NDSS 2011)}
+
+\bibitem{awft}
+        P. Godefroid, M.Y. Levin, D. Molnar.
+        Automated Whitebox Fuzz Testing.
+        In\emph{ Network and Distributed System Security Symposium (NDSS 2007)}
+        
+\bibitem{dtg}
+        R. Majumdar, R.G. Xu.
+        Directed test generation using symbolic grammars.        
+        In \emph{ASE '07 Proceedings of the twenty-second IEEE/ACM international conference on Automated software engineering}
+       
+\bibitem{cute}        
+        K. Sen, D. Marinov, G. Agha. 
+        CUTE: A Concolic Unit Testing Engine for C. 
+        In\emph{ 5th joint meeting of the European Software Engineering Conference and ACM SIGSOFT Symposium on the Foundations of Software Engineering (ESEC/FSE'05)}
+
+\bibitem{MC}
+        S. Hallem, B. Chelf, Y. Xie, and D. Engler.
+        A System and Language for Building System-Specific, Static Analyses.
+        In\emph{ Proceedings of the ACM SIGPLAN 2002 Conference on Programming Language Design and Implementation (PLDI 2002)}
+
+\bibitem{zitser}
+        Zitser M., Lippmann R., Leek T. 
+        Testing Static Analysis Tools Using Exploitable Buffer Overflows From Open Source Code.
+        In \emph{ACM SIGSOFT Symposium on the Foundations of Software Engineering (FSE 2004)}
 
 \end{thebibliography}
 
