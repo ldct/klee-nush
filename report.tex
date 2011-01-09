@@ -58,6 +58,15 @@ In our work, we extend a state-of-the-art symbolic execution engine \klee \cite{
 
 \end{enumerate*}
 
+Our evaluation tests the following hypotheses:
+
+\begin{enumerate*}
+\item An algorithm that supports merging is faster than an algorithm that does not support merging.
+\item In the worst case a non-merging algorithm exhibits exponential run time while our merging algorithm does not.
+\item An algorithm that does not always merge is faster than one that does
+
+\end{enumerate*}
+
 \section{Overview}\label{overview}
 
 \klee manipulates \emph{execution states}, objects that correspond to multiple actual runs. For instance if the program has one input $x$ one execution state may represent the set of "runs where $x > 10$" while another represents "runs where $x \le 10$ ". An execution state consists of \emph{constraints} expressed in terms of the symbolic input as well as \emph{memory objects} that represent the state of the program's memory.
