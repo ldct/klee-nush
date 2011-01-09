@@ -3,6 +3,8 @@
 
 %% Bibliography style:
 \usepackage[pdftex]{graphicx}
+\usepackage[compact]{titlesec}
+\usepackage{mdwlist}
 \usepackage{amsmath}
 \usepackage{array}
 
@@ -14,7 +16,7 @@
 %\bibpunct{(}{)}{;}{a}{,}{,}
 
 \setlength{\parskip}{1.5ex plus 0.5ex minus 0.2ex}
-\linespread{0}
+\linespread{1.2}
 
 \title{State Merging for Automatic Test Generation}
 \date{}
@@ -31,7 +33,7 @@ Kuan Xiang Wen$^{1}$, Li Xuan Ji$^{1}$, Tan Jiaqi$^{2}$\\
 
 
 \begin{document}
-\maketitle
+%\maketitle
 \begin{abstract}
 Automatic test generation is the problem of generating test cases in a given program for the purposes of vulnerability detection and program verification. One method of achieving this is Symbolic Execution, which executes the program with \emph{symbolic} variables to quickly test every possible execution path that the program may take. Often symbolic execution creates many execution paths that are similar; our project focuses on determining when these paths can be merged to cut down on repetitive operations. In addition, we have developed a pseudomerging algorithm to avoid situations where the merging algorithm performes worse. We prove our algorithm's correctness and demonstrate its practical usefulness by generating test cases for real world programs. We observe speed up from exponential to linear time for certain programs.
 \end{abstract}
@@ -39,16 +41,34 @@ Automatic test generation is the problem of generating test cases in a given pro
 \section{Introduction}
 Today, testing is our first line of defence against software errors. Unfortunately, the only widely used methods to generate test cases are manually writing them and generating them randomly through fuzz testing. Manually writing them is expensive and boring, while generating them randomly has been shown to result in low program coverage. 
 
-Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: we create an \emph{execution state} (which represent constraints on sets of actual program runs), mark the input as symbolic, ie, it can be anything, and execute the program on this symbolic input. When there is a conditional branch in the program, the system splits execution state into two, one where the branch guard is constrained to be true and one where it is false. Because only a small portion of execution paths are actually possible, a SMT solver is used to discard un-executable paths.
+Automatic test generation aims to solve this problem by using a computer to generate the test cases for a given program. The main approach to solving it is symbolic execution: instead of running the program on a concrete input, we run it on symbolic input, ie, input that can be 'anything'. When there is a conditional branch in the program, the system follows both branch; on each path it maintains a \emph{path constraint}, constraints that must hold on the input if executing the program on that input causes it to follow that path. On one branch the branch guard is constrained to be true and one where it is false. Because only a small portion of all execution paths are actually possible, a SMT constraint solver is used to check whether a branch condition is provably false; this discards un-executable paths.
 
-This method however falls short on programs that iterates a lot and with many repeated \emph{if} statements, which leads to too many execution states to be reasonable. Hence in our work, we extend a state-of-the-art symbolic execution engine \klee \cite{klee} which is developed at Stanford Univeristy to handle this problem. \klee is written in C++ and runs on LLVM bitcode. We call our extension \leek.
+The main scalability challenge with symbolic execution is the widely studied \emph{path explosion} problem. The number of execution paths is potentially exponential in the number of branches, leading to too many paths. We have developed an algorithm to determine when certain paths can me merged together, mitigating this problem.
 
-\paragraph{Outline}
+\subsection{Contributions}
 
-The remainder of this article is organized as follows. \S\ref{overview} presents a case study demonstrating the key features of our algorithm. \S\ref{algorithm} describes our algorithm while our results are described in \S\ref{evaluation}. Related work is discussed in \S\ref{related}. Finally, \S\ref{conclusions} gives the conclusions.
+In our work, we extend a state-of-the-art symbolic execution engine \klee \cite{klee} which is developed at Stanford Univeristy to handle this problem. \klee is written in C++ and runs on LLVM bitcode. We call our extension \leek. \klee had implemented a function to merge execution states but relied on users to manually annotate the program with merge points. Our contributions are threefold:
+
+\linespread{0}
+\begin{enumerate*}
+
+\item We develop an algorithm to \emph{automatically} merge execution paths.
+\item We prove our algorithm's correctness with respect to \klee.
+\item We performed an the first empirical evaluation of a merging algorithm on realistic benchmarks. This is the first such evaluation we are aware of.
+
+\end{enumerate*}
 
 \section{Overview}\label{overview}
-Here is an example of a test program we used, Berkeley Packet Filter (or bpf for short), to illustrate our merging algorithm.
+
+\klee manipulates \emph{execution states}, objects that correspond to multiple actual runs. For instance if the program has one input $x$ one execution state may represent the set of "runs where $x > 10$" while another represents "runs where $x \le 10$ ". An execution state consists of \emph{constraints} expressed in terms of the symbolic input as well as \emph{memory objects} that represent the state of the program's memory.
+
+When forking execution states, \klee adds (conjunction) the braching condition to one path and the negation of the branching condition to the other. Formally, if an execution state had path constraints $C$, and it hit a branch on condition $c$, the new states will have constraints $C \wedge c$ and $C \wedge \neg c$.
+
+When merging, \klee takes two execution state and forms the disjunction of their path constraints. If we merge two execution states with constraints $C_1$ and $C_2$, we form a new one with the constraint $C_1 \vee C_2$.
+
+We demonstrate our algorithm's operation on the Berkeley Packet Filter (or bpf).
+
+\linespread{0}
 
 \begin{verbatim}
 1. int bpf_validate(struct bpf_insn *f, int len)
@@ -74,45 +94,47 @@ Here is an example of a test program we used, Berkeley Packet Filter (or bpf for
 21.     }
 22.     return BPF_CLASS(f[len - 1].code) == BPF_RET;
 23. }
-24. #define N 10 
+24. #define LEN 10 
 25. int main(int argc, char *argv[]){  
 26.
-27.  struct bpf_insn ins_buffer[N];
+27.  struct bpf_insn ins_buffer[LEN];
 28.
-29.  klee_make_symbolic(ins_buffer, N * sizeof(ins_buffer[0]), "lol");
-30.  return bpf_validate(ins_buffer, N);
+29.  klee_make_symbolic(ins_buffer, LEN * sizeof(ins_buffer[0]), "ins_buffer");
+30.  return bpf_validate(ins_buffer, LEN);
 31.}
 \end{verbatim}
 
-\begin{enumerate}
-\item The variable ins\_buffer is marked as symbolic in ln29. 
-\item In line 8, the for-loop creates a fork, one where the guard is true and one where it is false. Each time the for-loop is run, there will be a new fork, creating new execution states. 
-\item At line 10, the switch statement forks execution $N-1$ times, where $N$ is the number of case statements
-\item At line 13, the nested switch statementA Region is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph. will create more execution states. 
+\begin{enumerate*}
+\item The variable ins\_buffer is marked as symbolic in line 29.
+\item In line 8, the \klee hits a branch (the loop guard) and forks execution into two. Each time the loop guard is hit execution is forked, until STP determines that the loop guard is provably false (it does so after $LEN$ iterations).
+\item At line 10, the switch statement forks execution $N-1$ times, where $N$ is the number of case statements.
 \item When the first execution state reaches line 20, it will not continue executing.
-\item When all execution states reach line 20, our algorithm will merge all of them, since their constraints do not differ much.
-\end{enumerate}
+\item When all execution states reach line 20, our algorithm will merge all of them. Then the execution state will unconditionally branch back to line 8.
+\end{enumerate*}
 
-This means that if a single execution state enters the loop body, all the execution states created by branching from it will merge back with it at the end of the switch statement, so no net additional execution states are created. In contrast, \klee creates $N-1$ new execution states and does not merge them back. This means \klee will create $N^\text{len} - 1$ execution states and will have exponential complexity, while our algorithm has linear complexity.
+The last two steps are only performed by \leek. This means that if a single execution state enters the loop body, all the execution states created by branching from it will merge back with it at the end of the switch statement, so no net additional execution states are created. In contrast, \klee creates $N-1$ new execution states and does not merge them back. This means \klee will create $N^\text{len} - 1$ execution states and will have exponential complexity, while our algorithm has linear complexity. We test this claim in \S\ref{evaluation}.
 
 The main challenge our algorithm solves is determining when an execution state must pause. If an execution state is executed past the merge point (at line 20) then a chance to merge is missed.
 
 \section{Algorithm}\label{algorithm}
-We describe two parts of our algorithm: deciding when to merge and simplifying constraints after merging. In our experience both were crucial to getting good results.
+We describe three parts of our algorithm: how to merge, deciding when to merge and simplifying constraints after merging. In our experience both were crucial to getting good results.
+
+\subsection{Merging}
+\subsubsection{When can we merge?}
+
 \begin{figure}
   \centering
     \includegraphics[width=\textwidth]{reg.png}
   \caption{Region information for bpf\_validate overlaid on the CFG. Each box is a \emph{basic block}; those in the same region are grouped by colour.}
 \end{figure}
 
-\subsection{Merge}
-Internally, LLVM bitcode consists of \emph{Basic Blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region \cite{regions} is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
+Internally, LLVM bitcode consists of \emph{basic blocks}, which are blocks of straigt-line code terminated by a control flow instruction. The control flow graph has basic blocks as nodes and directed edges representing control flow. We then group the basic blocks into \emph{Regions}. A Region \cite{regions} is a connected subgraph of a control flow graph that has exactly two connections to the remaining graph; regions may be nested. 
 
-In our algorithm, we track the regions an execution state is in. Whenever an execution path leaves a region $R$, it pauses and waits for other states in $R$ to leave $R$. Then, it tries to merge with other states paused at the same point before continuing. Our algorithm has the following advantages;
+In our algorithm, we track the regions an execution state is in. Whenever an execution path leaves a region $R$, it pauses and waits for other states in $R$ to leave $R$. Then, it tries to merge with other states paused at the same point before continuing. 
 
 Any merging algorithms will crucially rely on pausing execution states at some point, because otherwise a state will be executed too far past the merge point and a chance to merge will be missed. A flawed algorithm might end up in a deadlock situation where the paused state never gets unpaused. However this cannot happen to ours as we only paused when there are some states in the region we left.
 
-\subsection{When to merge?}
+\subsubsection{When do we want to merge?}
 We discovered experimentally that if we always merge execution states whenever possible, \klee takes a much longer time to solve the resulting constraints, outweighing the speedups offered by merging. Hence, we only merge two execution states if they are similar enough. We use two metrics for similarity: the number of memory addresses two states differ by as well as the number of constraints they have in common. We experiment with varying the threshold for these metrics in \S\ref{evaluation}.
 
 While we may not want to merge two states at a certain merge point, we may wish to merge them at a later point. Our algorithm will automatically ensure that when one of two states that did not merge at a certain merge point reach another merge point, it waits for the other state to attempt to merge again.
