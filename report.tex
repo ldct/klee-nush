@@ -151,6 +151,8 @@ We discovered experimentally that if we always merge execution states whenever p
 While we may not want to merge two states at a certain merge point, we may wish to merge them at a later point. Our algorithm will automatically ensure that when one of two states that did not merge at a certain merge point reach another merge point, it waits for the other state to attempt to merge again.
 
 \subsection{Simplify}
+Whenever an execution state is modified (i.e. during merging and splitting), \klee must read the constraints on it and sometimes solve it. However as the execution state progresses through the control flow of the program, it adds more constraints; the problem is worsened when constraints are merged as two large expression trees are simply joined together. The simplify algorithm is an optimization that avoids this by simplifying the constraints and makes the solver queries easier and the expressions easier to store in \klee. This is particularly useful as often, constraints that arise from merging "cancel out" (simplify to true).
+
 The first part of our simplifier uses a principle that we developed ourselves:
 Consider an expression $E = A\cap(B\cup A)$. We consider cases: if $A$ were false, then E will be false regardless of the value of $(B\cup A)$. If $A$ were true, we can replaces occurences of $A$ in the RHS $(B\cup A)$ with true. Thus we can always replace occurences of $A$ in the RHS with true. The tree will then simplify to $A\cap(B\cup \text{True}) = A$. By duality, in $A\cup(B\cup A)$ we can replace occurances of $A$ in $(B\cup A)$ by false.
 
@@ -229,6 +231,9 @@ Our algorithm can still be greatly improved to discover more potential merge poi
 \section{Appendix}
 
 \subsection{Correctness}
+The merge operation is a function that takes two execution states and returns a single one. An execution state comprises of a set of constraints that hold on its input as well as a set of mappings from memory locations to symbolic expressions representing the heap and stack of a running program.
+
+Given an execution state $E_1$ with constraints $C_1$ and a mapping $M_1$ such that $M_1 = M_1(loc_i)$ (a function that goes from the $i^{th}$ location in memory to an expression and an execution state $E_2$ with constraints $C_2$ and a mapping $M_2$, the merged state $E_m$ will have constraint $C_m = C_1 \vee C_2$ with a mapping $M_m(loc_i) = ITE(C_1, M_1(loc_i), M_2(loc_i))$. The $ITE$ (\emph{if-then-else}) function returns its second argument if its first argument is true, otherwise it returns its third argument.
 
 We prove here that our algorithm is sound and complete with respect to the base \klee system. Roughly, soundness means that all reported errors are acutal errors and completeness means that all errors are reported. We show that for a given program $P$, \leek will report an error for a certain input $I$ iif \klee reports an error for $I$. Note that our system is only sound and complete with respect to \klee; \leek is only sound and complete when klee is too. For instance, \klee does not support symbolic floating point; thus if it does not catch a certain input neither will \leek.
 
