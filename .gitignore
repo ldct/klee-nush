@@ -10,6 +10,7 @@ nush-testcase/*.png
 nush-testcase/*.jpg
 report.*
 !report.tex
+!report.pdf
 Release/
 Release+Asserts/
 config.status
